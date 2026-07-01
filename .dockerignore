@@ -1,0 +1,43 @@
+# Development and Git
+.git/
+.gitignore
+
+# Environments
+node_modules/
+.venv/
+env/
+venv/
+
+# Testing
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+docs/
+PRD.md
+Technical-Specification-Document.md
+Testing-and-QA-Checklist-Document.md
+User-Flow-and-Wireframe-Document.md
+README.md
+
+# Python Runtime
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local Data and Logs
+logs/
+data/
+
+# Deployment Files
+docker-compose.yml
+.env
+*.env
+
+# Agents
+.agents/
+.codebase-memory/
+
