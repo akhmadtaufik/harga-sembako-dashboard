@@ -1,0 +1,34 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sembako_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${BACKEND_HOST_PORT}:8000"
+    volumes:
+      - ./backend:/app  # Live-reload mapping for development
+    # Adjust this network block based on your existing DB configuration if needed
+    # networks:
+    #   - db_network 
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: sembako_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_HOST_PORT}:6379"
+    
+# networks:
+#   db_network:
+#     external: true
