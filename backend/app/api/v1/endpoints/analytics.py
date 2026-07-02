@@ -24,11 +24,11 @@ def custom_key_builder(
 from app.core.database import get_db
 from app.models import (
     FactDailyPrice, DimDate, DimMarket, DimRegency, 
-    DimCommodity, DimMarketType
+    DimCommodity, DimMarketType, DimProvince
 )
 from app.schemas import (
     GenericResponseModel, SeasonalityData, DisparityData, 
-    AnomalyData, MarketTypeSpreadData
+    AnomalyData, MarketTypeSpreadData, RegionalMatrixData
 )
 
 def date_to_int(d: date) -> int:
@@ -45,9 +45,9 @@ async def check_is_weekend(db: AsyncSession, target_date: date) -> bool:
 
 @router.get("/seasonality", response_model=GenericResponseModel[List[SeasonalityData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_seasonality(group_id: int, year: int, db: AsyncSession = Depends(get_db)):
+async def get_seasonality(commodity_id: int, year: int, db: AsyncSession = Depends(get_db)):
     """
-    Aggregate prices by month for time-series trends.
+    Aggregate prices by month for time-series trends based on a specific commodity.
     """
     query = (
         select(
@@ -55,8 +55,7 @@ async def get_seasonality(group_id: int, year: int, db: AsyncSession = Depends(g
             func.avg(FactDailyPrice.price).label("avg_price")
         )
         .join(DimDate, FactDailyPrice.date_id == DimDate.date_id)
-        .join(DimCommodity, FactDailyPrice.commodity_id == DimCommodity.commodity_id)
-        .where(DimCommodity.group_id == group_id, DimDate.year == year)
+        .where(FactDailyPrice.commodity_id == commodity_id, DimDate.year == year)
         .group_by(DimDate.month)
         .order_by(DimDate.month)
     )
@@ -69,7 +68,7 @@ async def get_seasonality(group_id: int, year: int, db: AsyncSession = Depends(g
 
 @router.get("/disparity", response_model=GenericResponseModel[List[DisparityData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_disparity(date_id: date, commodity_id: int, db: AsyncSession = Depends(get_db)):
+async def get_disparity(date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Compare regional averages against the national baseline for the Choropleth map layer.
     """
@@ -89,38 +88,56 @@ async def get_disparity(date_id: date, commodity_id: int, db: AsyncSession = Dep
     if national_avg is None or national_avg == 0:
         return GenericResponseModel(success=True, data=[])
     
-    # 2. Calculate Regional Average & Disparity
-    query = (
+    # 2. Calculate Regional Average & Disparity using LEFT JOIN to retain structural placeholders
+    aggregated_facts = (
         select(
-            DimRegency.regency_id,
-            DimRegency.name.label("regency_name"),
-            DimRegency.latitude,
-            DimRegency.longitude,
+            DimMarket.regency_id,
             func.avg(FactDailyPrice.price).label("regency_avg")
         )
         .select_from(FactDailyPrice)
         .join(DimMarket, FactDailyPrice.market_id == DimMarket.market_id)
-        .join(DimRegency, DimMarket.regency_id == DimRegency.regency_id)
         .where(
             FactDailyPrice.date_id == target_int,
             FactDailyPrice.commodity_id == commodity_id
         )
-        .group_by(DimRegency.regency_id, DimRegency.name, DimRegency.latitude, DimRegency.longitude)
+        .group_by(DimMarket.regency_id)
+    ).subquery()
+
+    query = (
+        select(
+            DimRegency.regency_id,
+            DimRegency.name.label("regency_name"),
+            DimProvince.name.label("province_name"),
+            DimRegency.latitude,
+            DimRegency.longitude,
+            aggregated_facts.c.regency_avg
+        )
+        .select_from(DimRegency)
+        .join(DimProvince, DimRegency.province_id == DimProvince.province_id)
+        .outerjoin(aggregated_facts, DimRegency.regency_id == aggregated_facts.c.regency_id)
     )
     
+    if province_id is not None:
+        query = query.where(DimRegency.province_id == province_id)
+        
     result = await db.execute(query)
     rows = result.all()
     
     data = []
     for row in rows:
         reg_avg = row.regency_avg
-        disparity_percentage = ((reg_avg - national_avg) / national_avg) * 100
+        if reg_avg is not None:
+            disparity_percentage = ((reg_avg - national_avg) / national_avg) * 100
+        else:
+            disparity_percentage = 0
+            
         data.append({
             "regency_id": row.regency_id,
             "regency_name": row.regency_name,
+            "province_name": row.province_name,
             "latitude": row.latitude,
             "longitude": row.longitude,
-            "regency_avg": reg_avg,
+            "regency_avg": reg_avg if reg_avg is not None else 0,
             "national_avg": national_avg,
             "disparity_percentage": disparity_percentage
         })
@@ -129,7 +146,7 @@ async def get_disparity(date_id: date, commodity_id: int, db: AsyncSession = Dep
 
 @router.get("/anomalies", response_model=GenericResponseModel[List[AnomalyData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_anomalies(date_id: date, db: AsyncSession = Depends(get_db)):
+async def get_anomalies(date_id: date, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Early warning list tracking the Top 5 commodities exceeding their 7-day Moving Average window.
     """
@@ -138,9 +155,18 @@ async def get_anomalies(date_id: date, db: AsyncSession = Depends(get_db)):
         
     target_int = date_to_int(date_id)
 
+    join_clause = ""
+    where_clause = ""
+    params = {"target_date": target_int}
+    
+    if province_id is not None:
+        join_clause = "JOIN dim_markets m ON f.market_id = m.market_id JOIN dim_regencies r ON m.regency_id = r.regency_id"
+        where_clause = "AND r.province_id = :prov_id"
+        params["prov_id"] = province_id
+
     # Using raw SQL with window functions because SQLAlchemy 2.0 window functions with range/rows between 
     # require careful crafting for moving averages over specific date intervals.
-    sql = text("""
+    sql = text(f"""
         WITH DailyAvg AS (
             SELECT 
                 f.commodity_id, 
@@ -149,7 +175,8 @@ async def get_anomalies(date_id: date, db: AsyncSession = Depends(get_db)):
                 AVG(f.price) as current_price
             FROM fact_daily_prices f
             JOIN dim_commodities c ON f.commodity_id = c.commodity_id
-            WHERE f.date_id <= :target_date
+            {join_clause}
+            WHERE f.date_id <= :target_date {where_clause}
             GROUP BY f.commodity_id, c.commodity_name, f.date_id
         ),
         MovingAvgs AS (
@@ -179,7 +206,7 @@ async def get_anomalies(date_id: date, db: AsyncSession = Depends(get_db)):
         LIMIT 5;
     """)
 
-    result = await db.execute(sql, {"target_date": target_int})
+    result = await db.execute(sql, params)
     rows = result.all()
     
     data = []
@@ -196,9 +223,9 @@ async def get_anomalies(date_id: date, db: AsyncSession = Depends(get_db)):
 
 @router.get("/spread/market-types", response_model=GenericResponseModel[List[MarketTypeSpreadData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_market_type_spread(start_date: date, end_date: date, db: AsyncSession = Depends(get_db)):
+async def get_market_type_spread(start_date: date, end_date: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
-    Calculate structural pricing spreads between Traditional, Modern, Wholesaler, and Producer classifications.
+    Calculate structural pricing spreads between Traditional, Modern, Wholesaler, and Producer classifications for a specific commodity.
     """
     start_int = date_to_int(start_date)
     end_int = date_to_int(end_date)
@@ -214,11 +241,15 @@ async def get_market_type_spread(start_date: date, end_date: date, db: AsyncSess
         .join(DimMarketType, DimMarket.market_type_id == DimMarketType.market_type_id)
         .where(
             FactDailyPrice.date_id >= start_int,
-            FactDailyPrice.date_id <= end_int
+            FactDailyPrice.date_id <= end_int,
+            FactDailyPrice.commodity_id == commodity_id
         )
-        .group_by(DimDate.full_date, DimMarketType.name)
-        .order_by(DimDate.full_date, DimMarketType.name)
     )
+    
+    if province_id is not None:
+        query = query.join(DimRegency, DimMarket.regency_id == DimRegency.regency_id).where(DimRegency.province_id == province_id)
+        
+    query = query.group_by(DimDate.full_date, DimMarketType.name).order_by(DimDate.full_date, DimMarketType.name)
     
     result = await db.execute(query)
     rows = result.all()
@@ -227,4 +258,45 @@ async def get_market_type_spread(start_date: date, end_date: date, db: AsyncSess
         return GenericResponseModel(success=True, data=[])
         
     data = [{"date_id": row.date_id, "market_type_name": row.market_type_name, "avg_price": row.avg_price} for row in rows]
+    return GenericResponseModel(success=True, data=data)
+
+@router.get("/regional-matrix", response_model=GenericResponseModel[List[RegionalMatrixData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_regional_matrix(date_id: date, commodity_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Get aggregated regional averages matrix data.
+    """
+    target_int = date_to_int(date_id)
+
+    query = (
+        select(
+            DimProvince.province_id,
+            DimProvince.name.label("province_name"),
+            func.avg(FactDailyPrice.price).label("average_price"),
+            func.count(FactDailyPrice.price).label("record_count")
+        )
+        .select_from(FactDailyPrice)
+        .join(DimMarket, FactDailyPrice.market_id == DimMarket.market_id)
+        .join(DimRegency, DimMarket.regency_id == DimRegency.regency_id)
+        .join(DimProvince, DimRegency.province_id == DimProvince.province_id)
+        .where(
+            FactDailyPrice.date_id == target_int,
+            FactDailyPrice.commodity_id == commodity_id
+        )
+        .group_by(DimProvince.province_id, DimProvince.name)
+        .order_by(func.avg(FactDailyPrice.price).desc())
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    data = []
+    for row in rows:
+        data.append({
+            "province_id": row.province_id,
+            "province_name": row.province_name,
+            "average_price": row.average_price,
+            "record_count": row.record_count
+        })
+        
     return GenericResponseModel(success=True, data=data)
