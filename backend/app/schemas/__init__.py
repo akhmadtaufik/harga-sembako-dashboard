@@ -14,6 +14,7 @@ from app.schemas.analytics import (
     DisparityData,
     AnomalyData,
     MarketTypeSpreadData,
+    RegionalMatrixData,
 )
 
 __all__ = [

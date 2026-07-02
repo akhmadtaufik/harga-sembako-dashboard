@@ -10,6 +10,7 @@ class SeasonalityData(BaseModel):
 class DisparityData(BaseModel):
     regency_id: int
     regency_name: str
+    province_name: str
     latitude: Optional[float]
     longitude: Optional[float]
     regency_avg: Decimal
@@ -27,3 +28,9 @@ class MarketTypeSpreadData(BaseModel):
     date_id: date
     market_type_name: str
     avg_price: Decimal
+
+class RegionalMatrixData(BaseModel):
+    province_id: int
+    province_name: str
+    average_price: Optional[Decimal]
+    record_count: int
