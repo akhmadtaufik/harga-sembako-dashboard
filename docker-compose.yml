@@ -15,12 +15,27 @@ services:
       - "${BACKEND_HOST_PORT}:8000"
     volumes:
       - ./backend:/app  # Live-reload mapping for development
-    # Adjust this network block based on your existing DB configuration if needed
     # networks:
     #   - db_network 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sembako_frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${FRONTEND_HOST_PORT}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
 
   redis:
     image: redis:7-alpine
@@ -28,7 +43,3 @@ services:
     restart: unless-stopped
     ports:
       - "${REDIS_HOST_PORT}:6379"
-    
-# networks:
-#   db_network:
-#     external: true
