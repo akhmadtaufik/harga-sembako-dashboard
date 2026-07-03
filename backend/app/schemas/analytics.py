@@ -4,12 +4,13 @@ from decimal import Decimal
 from datetime import date
 
 class SeasonalityData(BaseModel):
-    month: int
+    date_id: date
     avg_price: Decimal
 
 class DisparityData(BaseModel):
     regency_id: int
     regency_name: str
+    province_id: int
     province_name: str
     latitude: Optional[float]
     longitude: Optional[float]
