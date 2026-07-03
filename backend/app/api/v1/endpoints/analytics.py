@@ -8,18 +8,11 @@ from sqlalchemy.orm import aliased
 from fastapi_cache.decorator import cache
 from fastapi import Request, Response
 
-def custom_key_builder(
-    func,
-    namespace: Optional[str] = "",
-    request: Optional[Request] = None,
-    response: Optional[Response] = None,
-    *args,
-    **kwargs,
-):
-    # fastapi-cache2 passes the endpoint kwargs inside the kwargs dict under the key 'kwargs'
-    endpoint_kwargs = kwargs.get("kwargs", {})
-    cache_kwargs = {k: str(v) for k, v in endpoint_kwargs.items() if k != "db"}
-    return f"{namespace}:{func.__module__}:{func.__name__}:{cache_kwargs}"
+def custom_key_builder(func, namespace: str = "", request: Request = None, response: Response = None, *args, **kwargs):
+    # Extract path and query params to guarantee unique keys per filter combination
+    query_string = request.url.query if request else ""
+    path = request.url.path if request else ""
+    return f"{namespace}:{path}:{query_string}"
 
 from app.core.database import get_db
 from app.models import (
@@ -45,30 +38,30 @@ async def check_is_weekend(db: AsyncSession, target_date: date) -> bool:
 
 @router.get("/seasonality", response_model=GenericResponseModel[List[SeasonalityData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_seasonality(commodity_id: int, year: int, db: AsyncSession = Depends(get_db)):
+async def get_seasonality(request: Request, commodity_id: int, year: int, db: AsyncSession = Depends(get_db)):
     """
-    Aggregate prices by month for time-series trends based on a specific commodity.
+    Aggregate prices by day for time-series trends based on a specific commodity.
     """
     query = (
         select(
-            DimDate.month.label("month"),
+            DimDate.full_date.label("date_id"),
             func.avg(FactDailyPrice.price).label("avg_price")
         )
         .join(DimDate, FactDailyPrice.date_id == DimDate.date_id)
         .where(FactDailyPrice.commodity_id == commodity_id, DimDate.year == year)
-        .group_by(DimDate.month)
-        .order_by(DimDate.month)
+        .group_by(DimDate.full_date)
+        .order_by(DimDate.full_date)
     )
     
     result = await db.execute(query)
     rows = result.all()
     
-    data = [{"month": row.month, "avg_price": row.avg_price} for row in rows]
+    data = [{"date_id": row.date_id, "avg_price": row.avg_price} for row in rows]
     return GenericResponseModel(success=True, data=data)
 
 @router.get("/disparity", response_model=GenericResponseModel[List[DisparityData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_disparity(date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+async def get_disparity(request: Request, date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Compare regional averages against the national baseline for the Choropleth map layer.
     """
@@ -107,6 +100,7 @@ async def get_disparity(date_id: date, commodity_id: int, province_id: Optional[
         select(
             DimRegency.regency_id,
             DimRegency.name.label("regency_name"),
+            DimProvince.province_id,
             DimProvince.name.label("province_name"),
             DimRegency.latitude,
             DimRegency.longitude,
@@ -134,6 +128,7 @@ async def get_disparity(date_id: date, commodity_id: int, province_id: Optional[
         data.append({
             "regency_id": row.regency_id,
             "regency_name": row.regency_name,
+            "province_id": row.province_id,
             "province_name": row.province_name,
             "latitude": row.latitude,
             "longitude": row.longitude,
@@ -146,7 +141,7 @@ async def get_disparity(date_id: date, commodity_id: int, province_id: Optional[
 
 @router.get("/anomalies", response_model=GenericResponseModel[List[AnomalyData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_anomalies(date_id: date, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+async def get_anomalies(request: Request, date_id: date, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Early warning list tracking the Top 5 commodities exceeding their 7-day Moving Average window.
     """
@@ -223,7 +218,7 @@ async def get_anomalies(date_id: date, province_id: Optional[int] = None, db: As
 
 @router.get("/spread/market-types", response_model=GenericResponseModel[List[MarketTypeSpreadData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_market_type_spread(start_date: date, end_date: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+async def get_market_type_spread(request: Request, start_date: date, end_date: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Calculate structural pricing spreads between Traditional, Modern, Wholesaler, and Producer classifications for a specific commodity.
     """
@@ -262,7 +257,7 @@ async def get_market_type_spread(start_date: date, end_date: date, commodity_id:
 
 @router.get("/regional-matrix", response_model=GenericResponseModel[List[RegionalMatrixData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_regional_matrix(date_id: date, commodity_id: int, db: AsyncSession = Depends(get_db)):
+async def get_regional_matrix(request: Request, date_id: date, commodity_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get aggregated regional averages matrix data.
     """
