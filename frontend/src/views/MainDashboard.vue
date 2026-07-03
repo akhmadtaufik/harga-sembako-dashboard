@@ -223,7 +223,9 @@ export default defineComponent({
             lat: item.latitude,
             lng: item.longitude,
             marketName: item.regency_name,
+            regency_name: item.regency_name,
             provinceName: item.province_name,
+            province_id: item.province_id,
             price: item.regency_avg,
             disparity: item.disparity_percentage,
             isAnomaly: item.disparity_percentage > 0, // Any positive spike is an anomaly (crimson), negative is editorial green
