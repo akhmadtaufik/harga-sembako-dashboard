@@ -74,7 +74,12 @@ export default defineComponent({
       try {
         const response = await fetch('/indonesia-regencies.geojson')
         if (!response.ok) throw new Error('Failed to load GeoJSON')
-        this.geoJsonData = await response.json()
+        const rawData = await response.json()
+        const allowedProvinces = ['31', '32', '33', '34', '35', '36', '51']
+        this.geoJsonData = {
+          ...rawData,
+          features: rawData.features.filter(f => allowedProvinces.includes(f.properties.province_id))
+        }
       } catch (err) {
         console.error('GeoJSON Load Error:', err)
       } finally {
@@ -103,6 +108,7 @@ export default defineComponent({
         .replace(/daerah istimewa/g, '')
         .replace(/di /g, '')
         .replace(/dki /g, '')
+        .replace(/\s+/g, '')
         .replace(/[^a-z0-9]/g, '')
     },
     renderChoropleth() {
@@ -120,26 +126,26 @@ export default defineComponent({
       // Zero-Fallback Composite Matching: Build Database Keys
       const dataMap = new Map()
       this.locations.forEach(loc => {
-        if (!loc.provinceName || !loc.marketName) return
-        const dbKey = `${this.normalizeName(loc.provinceName)}_${this.normalizeName(loc.marketName)}`
+        const provId = loc.province_id
+        const regName = loc.regency_name || loc.marketName
+        if (!provId || !regName) return
+        const dbKey = `${provId}_${this.normalizeName(regName)}`
         dataMap.set(dbKey, loc)
       })
 
-      const drawnBounds = L.latLngBounds()
+      const matchedBounds = L.latLngBounds()
+      const globalBounds = L.latLngBounds()
       const provinceBounds = L.latLngBounds()
       
       const isProvinceFiltered = this.province_id && this.province_id !== 'all'
-      const activeNormalizedProv = isProvinceFiltered && this.locations.length > 0 
-        ? this.normalizeName(this.locations[0].provinceName) 
-        : null
 
       this.geoJsonLayer = L.geoJSON(this.geoJsonData, {
         style: (feature) => {
           // Zero-Fallback Composite Matching: Build GeoJSON Keys
-          const featureProv = this.normalizeName(feature.properties.prov_name)
-          const featureReg = this.normalizeName(feature.properties.name || feature.properties.alt_name)
+          const geoProvId = parseInt(feature.properties.province_id, 10)
+          const geoReg = this.normalizeName(feature.properties.name || feature.properties.alt_name)
           
-          const geoKey = `${featureProv}_${featureReg}`
+          const geoKey = `${geoProvId}_${geoReg}`
           
           // Strict Evaluation: No fuzzy fallback
           const matchedLoc = dataMap.get(geoKey)
@@ -164,9 +170,9 @@ export default defineComponent({
           }
         },
         onEachFeature: (feature, layer) => {
-          const featureProv = this.normalizeName(feature.properties.prov_name)
+          globalBounds.extend(layer.getBounds())
           
-          if (isProvinceFiltered && activeNormalizedProv && featureProv === activeNormalizedProv) {
+          if (isProvinceFiltered && parseInt(feature.properties.province_id, 10) === parseInt(this.province_id, 10)) {
             provinceBounds.extend(layer.getBounds())
           }
           
@@ -217,26 +223,25 @@ export default defineComponent({
             }
           })
           
-          drawnBounds.extend(layer.getBounds())
+          matchedBounds.extend(layer.getBounds())
         }
       }).addTo(this.map)
 
-      this.$nextTick(() => {
+      setTimeout(() => {
         if (this.map) {
           this.map.invalidateSize()
-          // Fallbacks prioritized by accuracy
+          // Priority: selected province bounds, then global Java+Bali bounds, then fallback to national center
           if (isProvinceFiltered && provinceBounds.isValid()) {
             this.map.fitBounds(provinceBounds, { padding: [20, 20], animate: true, duration: 1.0 })
-          } else if (isProvinceFiltered && drawnBounds.isValid()) {
-            this.map.fitBounds(drawnBounds, { padding: [20, 20], animate: true, duration: 1.0 })
-          } else if (!isProvinceFiltered) {
-            this.map.setView([-0.789275, 113.921327], 5, { animate: true, duration: 1.0 })
+          } else if (!isProvinceFiltered && globalBounds.isValid()) {
+            this.map.fitBounds(globalBounds, { padding: [20, 20], animate: true, duration: 1.0 })
+          } else if (matchedBounds.isValid()) {
+            this.map.fitBounds(matchedBounds, { padding: [20, 20], animate: true, duration: 1.0 })
           } else {
-             // Ultimate failsafe to avoid locking the view
             this.map.setView([-0.789275, 113.921327], 5, { animate: true, duration: 1.0 })
           }
         }
-      })
+      }, 300)
     }
   }
 })
