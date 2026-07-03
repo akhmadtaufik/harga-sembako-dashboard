@@ -23,11 +23,13 @@
               <!-- Skeleton -->
               <div v-if="loadingSpread" class="absolute inset-4 animate-pulse bg-slate-800/50 rounded-sm"></div>
               <!-- Empty State -->
-              <div v-else-if="!traditionalData" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm">
-                <span class="block text-slate-400 font-medium">Missing Spread Data</span>
-                <span class="block text-xs mt-1">Data Unavailable for Selected Date Matrix</span>
+              <div v-else-if="!traditionalSeries || traditionalSeries.length === 0" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm bg-slate-800/20 p-6 text-center">
+                <span class="block text-slate-400 font-medium mb-2">Informasi Tidak Lengkap</span>
+                <span class="block text-xs text-slate-500">Data tidak tersedia untuk tipe pasar ini pada wilayah/waktu yang dipilih.</span>
               </div>
-              <div v-else id="chart-traditional" class="flex-1 w-full h-full"></div>
+              <div v-else class="flex-1 w-full h-full">
+                <TrendAnalyticsChart :xAxisData="traditionalXAxis" :seriesData="traditionalSeries" />
+              </div>
             </div>
           </div>
           
@@ -42,11 +44,13 @@
               <!-- Skeleton -->
               <div v-if="loadingSpread" class="absolute inset-4 animate-pulse bg-slate-800/50 rounded-sm"></div>
               <!-- Empty State -->
-              <div v-else-if="!modernData" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm">
-                <span class="block text-slate-400 font-medium">Missing Spread Data</span>
-                <span class="block text-xs mt-1">Data Unavailable for Selected Date Matrix</span>
+              <div v-else-if="!modernSeries || modernSeries.length === 0" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm bg-slate-800/20 p-6 text-center">
+                <span class="block text-slate-400 font-medium mb-2">Informasi Tidak Lengkap</span>
+                <span class="block text-xs text-slate-500">Data tidak tersedia untuk tipe pasar ini pada wilayah/waktu yang dipilih.</span>
               </div>
-              <div v-else id="chart-modern" class="flex-1 w-full h-full"></div>
+              <div v-else class="flex-1 w-full h-full">
+                <TrendAnalyticsChart :xAxisData="modernXAxis" :seriesData="modernSeries" />
+              </div>
             </div>
           </div>
         </div>
@@ -65,8 +69,9 @@
               <span class="block text-slate-400 font-medium">Time-Series Empty</span>
               <span class="block text-xs mt-1">Data Unavailable for Selected Date Matrix</span>
             </div>
-            <!-- ECharts Placeholder -->
-            <div v-else id="seasonality-chart" class="flex-1 w-full h-full"></div>
+            <div v-else class="flex-1 w-full h-full">
+              <TrendAnalyticsChart :xAxisData="seasonalityXAxis" :seriesData="seasonalitySeries" />
+            </div>
           </div>
           
           <div class="lg:col-span-4 bg-slate-800/40 border border-slate-700/50 rounded-sm h-[400px] flex flex-col overflow-hidden">
@@ -106,33 +111,40 @@ import { defineComponent } from 'vue'
 import { mapState } from 'pinia'
 import { useMacroStore } from '../store/macro'
 import DashboardLayout from '../components/DashboardLayout.vue'
+import TrendAnalyticsChart from '../components/TrendAnalyticsChart.vue'
 import apiClient from '../plugins/axios'
 
 export default defineComponent({
   name: 'CommodityDetail',
   components: {
-    DashboardLayout
+    DashboardLayout,
+    TrendAnalyticsChart
   },
   data() {
     return {
       commodityId: null,
       loadingSpread: true,
       loadingSeries: true,
-      traditionalData: null,
-      modernData: null,
+      traditionalXAxis: [],
+      traditionalSeries: [],
+      modernXAxis: [],
+      modernSeries: [],
+      seasonalityXAxis: [],
+      seasonalitySeries: [],
       seriesData: null,
       historicalAnomalies: [],
       abortController: null
     }
   },
   computed: {
-    ...mapState(useMacroStore, ['province_id', 'date'])
+    ...mapState(useMacroStore, ['province_id', 'date', 'commodity_id'])
   },
   watch: {
-    date: 'fetchDetailData'
+    date: 'fetchDetailData',
+    province_id: 'fetchDetailData',
+    commodity_id: 'fetchDetailData'
   },
   mounted() {
-    this.commodityId = this.$route.params.id || 'N/A'
     this.fetchDetailData()
   },
   beforeUnmount() {
@@ -142,8 +154,12 @@ export default defineComponent({
   },
   methods: {
     async fetchDetailData() {
-      this.traditionalData = null
-      this.modernData = null
+      this.traditionalXAxis = []
+      this.traditionalSeries = []
+      this.modernXAxis = []
+      this.modernSeries = []
+      this.seasonalityXAxis = []
+      this.seasonalitySeries = []
       this.seriesData = null
       this.historicalAnomalies = []
       
@@ -172,31 +188,53 @@ export default defineComponent({
           params: { 
             start_date: startDate.toISOString().split('T')[0], 
             end_date: this.date,
-            commodity_id: parseInt(this.commodityId, 10),
+            commodity_id: parseInt(this.commodity_id, 10),
             ...payloadParams
           },
           signal
         })
         
         if (spreadRes.data.success && spreadRes.data.data && spreadRes.data.data.length > 0) {
-          // In a real scenario, map this data into the chart instances.
-          // Since the chart instances are just placeholders currently, we populate the raw state.
-          this.traditionalData = spreadRes.data.data.filter(d => d.market_type_name === 'Traditional')
-          this.modernData = spreadRes.data.data.filter(d => d.market_type_name === 'Modern Retail')
+          const tradData = spreadRes.data.data.filter(d => d.market_type_name === 'Pasar Tradisional')
+          const modData = spreadRes.data.data.filter(d => d.market_type_name === 'Pasar Modern')
           
-          // Safeguard if filters yield empty arrays
-          if (this.traditionalData.length === 0) this.traditionalData = null
-          if (this.modernData.length === 0) this.modernData = null
+          if (tradData.length > 0) {
+            this.traditionalXAxis = tradData.map(d => {
+              const dt = new Date(d.date_id)
+              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            })
+            this.traditionalSeries = [{
+              name: 'Average Price',
+              data: tradData.map(d => parseFloat(d.avg_price)),
+              color: '#34d399'
+            }]
+          } else {
+            this.traditionalSeries = []
+          }
+          
+          if (modData.length > 0) {
+            this.modernXAxis = modData.map(d => {
+              const dt = new Date(d.date_id)
+              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            })
+            this.modernSeries = [{
+              name: 'Average Price',
+              data: modData.map(d => parseFloat(d.avg_price)),
+              color: '#f87171'
+            }]
+          } else {
+            this.modernSeries = []
+          }
         } else {
-          this.traditionalData = null
-          this.modernData = null
+          this.traditionalSeries = []
+          this.modernSeries = []
         }
       } catch (err) {
         if (err.name !== 'CanceledError' && err.message !== 'canceled') {
           console.error('Failed to fetch spread data:', err)
         }
-        this.traditionalData = null
-        this.modernData = null
+        this.traditionalSeries = []
+        this.modernSeries = []
       } finally {
         this.loadingSpread = false
       }
@@ -205,20 +243,32 @@ export default defineComponent({
         // Fetch Seasonality Time-Series (Seasonality API is currently aggregated by commodity, 
         // if we add province filtering it would go here. For now it is national.)
         const seriesRes = await apiClient.get('/analytics/seasonality', {
-          params: { commodity_id: parseInt(this.commodityId, 10), year: new Date(this.date).getFullYear() },
+          params: { commodity_id: parseInt(this.commodity_id, 10), year: new Date(this.date).getFullYear() },
           signal
         })
         
         if (seriesRes.data.success && seriesRes.data.data && seriesRes.data.data.length > 0) {
-          this.seriesData = seriesRes.data.data
+          const rawData = seriesRes.data.data
+          this.seasonalityXAxis = rawData.map(d => {
+            const dt = new Date(d.date_id)
+            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          })
+          this.seasonalitySeries = [{
+            name: 'Historical Trend',
+            data: rawData.map(d => parseFloat(d.avg_price)),
+            color: '#60a5fa'
+          }]
+          this.seriesData = true // Keeps UI out of empty state
         } else {
           this.seriesData = null
+          this.seasonalitySeries = []
         }
       } catch (err) {
         if (err.name !== 'CanceledError' && err.message !== 'canceled') {
           console.error('Failed to fetch seasonality:', err)
         }
         this.seriesData = null
+        this.seasonalitySeries = []
       } finally {
         this.loadingSeries = false
       }
