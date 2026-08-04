@@ -9,7 +9,17 @@
 
       <!-- Split Comparative Panes (50/50 Split) -->
       <section class="mb-10">
-        <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 mb-5 uppercase border-b border-slate-800 pb-2">Market Type Spread Analysis</h2>
+        <div class="mb-5 border-b border-slate-800 pb-2 flex items-center justify-between relative">
+          <div class="flex items-center gap-2 group relative w-max">
+            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Market Type Spread Analysis</h2>
+            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case">
+              Membandingkan tren harga rata-rata harian antara Pasar Tradisional (Baseline) dan Pasar Modern (Premium). Analisis rentang (spread) ini berguna untuk memantau disparitas harga dan mengidentifikasi margin premium yang diterapkan oleh ritel modern.
+            </div>
+          </div>
+        </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Pane 1: Traditional Markets -->
@@ -58,7 +68,17 @@
 
       <!-- Asymmetric Analytics Row (Seasonality Time-Series) -->
       <section>
-        <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 mb-5 uppercase border-b border-slate-800 pb-2">Seasonality Time-Series</h2>
+        <div class="mb-5 border-b border-slate-800 pb-2 flex items-center justify-between relative">
+          <div class="flex items-center gap-2 group">
+            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Seasonality Time-Series</h2>
+            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+              Menampilkan tren pergerakan harga rata-rata harian komoditas dari waktu ke waktu. Gunakan grafik ini untuk melihat pola musiman atau tren jangka panjang.
+            </div>
+          </div>
+        </div>
         
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div class="lg:col-span-8 bg-slate-800/40 border border-slate-700/50 rounded-sm h-[400px] p-4 flex flex-col relative">
@@ -75,8 +95,16 @@
           </div>
           
           <div class="lg:col-span-4 bg-slate-800/40 border border-slate-700/50 rounded-sm h-[400px] flex flex-col overflow-hidden">
-             <div class="p-4 border-b border-slate-700/50 bg-slate-800/60 sticky top-0 z-10">
-               <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Historical Anomalies</h3>
+             <div class="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/60 sticky top-0 z-10 relative">
+               <div class="flex items-center gap-2 group">
+                 <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Historical Anomalies</h3>
+                 <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                 </svg>
+                 <div class="absolute left-0 top-full mt-2 w-64 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+                   Mendeteksi fluktuasi harga yang tidak wajar. Anomali dicatat jika harga harian menyimpang secara signifikan (Spike/Drop) dibandingkan dengan rata-rata pergerakan harga 7 hari terakhir (7D MA).
+                 </div>
+               </div>
              </div>
              
              <!-- Skeleton Loader -->
@@ -91,7 +119,7 @@
              </div>
              
              <!-- List View -->
-             <div v-else class="flex-1 overflow-y-auto p-4 space-y-4">
+             <div v-else class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                <div v-for="anomaly in historicalAnomalies" :key="anomaly.id" class="border-l-2 border-red-500/80 pl-3 py-1 bg-slate-800/30 pr-2">
                  <p class="text-[10px] text-slate-400 font-mono tracking-wider">{{ anomaly.date }}</p>
                  <p class="text-sm font-bold tracking-tight text-slate-200 mt-0.5">{{ formatCurrency(anomaly.price) }}</p>
@@ -272,6 +300,37 @@ export default defineComponent({
       } finally {
         this.loadingSeries = false
       }
+
+      try {
+        // Fetch Historical Anomalies for current date matrix
+        const anomalyRes = await apiClient.get('/analytics/anomalies', {
+          params: { date_id: this.date, commodity_id: parseInt(this.commodity_id, 10), ...payloadParams },
+          signal
+        })
+        if (anomalyRes.data.success && anomalyRes.data.data) {
+          this.historicalAnomalies = anomalyRes.data.data.map((item, idx) => {
+            // Parse YYYYMMDD integer back to a readable date
+            const dateStr = String(item.date_id);
+            const formattedDate = dateStr.length === 8 
+                ? new Date(dateStr.slice(0,4), dateStr.slice(4,6)-1, dateStr.slice(6,8)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : item.date_id;
+
+            return {
+                id: idx,
+                date: formattedDate, // Properly mapped date
+                price: item.current_price,
+                reason: `${item.anomaly_type || 'Deviated'} (${item.percentage_difference > 0 ? '+' : ''}${parseFloat(item.percentage_difference).toFixed(2)}% vs 7D MA)`
+            };
+          })
+        } else {
+          this.historicalAnomalies = []
+        }
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.message !== 'canceled') {
+          console.error('Failed to fetch historical anomalies:', err)
+        }
+        this.historicalAnomalies = []
+      }
     },
     formatCurrency(value) {
       if (!value) return 'Rp 0'
@@ -280,3 +339,29 @@ export default defineComponent({
   }
 })
 </script>
+
+<style scoped>
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(71, 85, 105, 0.5) transparent; /* slate-600/50 */
+}
+
+/* Webkit (Chrome, Edge, Safari) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(71, 85, 105, 0.5); /* slate-600 with opacity */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.8); /* slate-500 on hover */
+}
+</style>
