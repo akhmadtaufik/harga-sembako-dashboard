@@ -19,11 +19,11 @@ class DisparityData(BaseModel):
     disparity_percentage: Decimal
 
 class AnomalyData(BaseModel):
-    commodity_id: int
-    commodity_name: str
+    date_id: int
     current_price: Decimal
     moving_average_7d: Decimal
     percentage_difference: Decimal
+    anomaly_type: Optional[str] = "Spike"
 
 class MarketTypeSpreadData(BaseModel):
     date_id: date
