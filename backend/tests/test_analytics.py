@@ -25,7 +25,7 @@ async def test_disparity_and_anomalies(auth_client):
     assert isinstance(data["data"], list)
 
     # Test Anomalies (Max 5 records validation)
-    response = await auth_client.get("/api/v1/analytics/anomalies?date_id=2026-06-01")
+    response = await auth_client.get("/api/v1/analytics/anomalies?date_id=2026-06-01&commodity_id=1")
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
