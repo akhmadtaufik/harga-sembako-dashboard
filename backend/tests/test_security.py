@@ -4,7 +4,7 @@ import pytest
 async def test_unauthorized_blocker(async_client):
     # Test endpoints without auth headers
     endpoints = [
-        "/api/v1/analytics/anomalies?date_id=2026-06-01",
+        "/api/v1/analytics/anomalies?date_id=2026-06-01&commodity_id=1",
         "/api/v1/locations/provinces"
     ]
     
@@ -19,7 +19,7 @@ async def test_unauthorized_blocker(async_client):
 @pytest.mark.asyncio
 async def test_holiday_weekend_edge_case(auth_client):
     # 2026-07-05 is a Sunday
-    response = await auth_client.get("/api/v1/analytics/anomalies?date_id=2026-07-05")
+    response = await auth_client.get("/api/v1/analytics/anomalies?date_id=2026-07-05&commodity_id=1")
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
