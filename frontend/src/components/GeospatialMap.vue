@@ -1,10 +1,49 @@
 <template>
-  <div class="geospatial-map-wrapper w-full relative bg-slate-900 rounded-sm overflow-hidden">
+  <div class="geospatial-map-wrapper w-full relative bg-slate-900 rounded-lg overflow-hidden flex flex-col h-full border border-slate-800 shadow-2xl">
     <!-- Pulse Skeleton Loader -->
-    <div v-if="loadingGeoJson" class="absolute inset-0 z-10 bg-slate-800 flex items-center justify-center animate-pulse">
-      <span class="text-slate-500 font-medium tracking-widest uppercase text-xs">Loading Geospatial Data...</span>
+    <div v-if="loadingGeoJson" class="absolute inset-0 z-20 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center animate-pulse gap-3">
+      <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      <span class="text-slate-400 font-mono tracking-widest uppercase text-xs">Loading Geospatial Layer...</span>
     </div>
-    <div ref="mapContainer" id="map" class="h-[500px] w-full block z-0"></div>
+    <div ref="mapContainer" id="map" class="h-full w-full block z-0 flex-1"></div>
+
+    <!-- Floating Choropleth Legend -->
+    <div class="absolute bottom-4 right-4 z-[400] bg-slate-900/80 backdrop-blur-md border border-slate-700/70 rounded-lg p-3.5 shadow-2xl text-xs text-slate-300 pointer-events-auto max-w-[210px] transition-all duration-300 hover:border-slate-600">
+      <div class="font-bold uppercase tracking-wider text-[10px] text-slate-400 mb-2 border-b border-slate-700/50 pb-1 flex items-center justify-between">
+        <span>Price Disparity Scale</span>
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      </div>
+      <div class="space-y-2 font-mono text-[11px]">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-xs inline-block bg-[#991b1b] shadow-sm shadow-red-900/50"></span>
+            <span class="text-red-300 font-medium">> +15%</span>
+          </div>
+          <span class="text-[9px] text-slate-400 font-sans">High Spike</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-xs inline-block bg-[#f87171] shadow-sm shadow-red-400/50"></span>
+            <span class="text-red-400 font-medium">0% to +15%</span>
+          </div>
+          <span class="text-[9px] text-slate-400 font-sans">Mild Spike</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-xs inline-block bg-[#475569] shadow-sm"></span>
+            <span class="text-slate-400 font-medium">0%</span>
+          </div>
+          <span class="text-[9px] text-slate-400 font-sans">Baseline</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-xs inline-block bg-[#10b981] shadow-sm shadow-emerald-500/50"></span>
+            <span class="text-emerald-400 font-medium">< 0%</span>
+          </div>
+          <span class="text-[9px] text-slate-400 font-sans">Below Avg</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -12,7 +51,7 @@
 import { defineComponent } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { mapState } from 'pinia'
+import { mapState, mapActions } from 'pinia'
 import { useMacroStore } from '../store/macro'
 
 export default defineComponent({
@@ -21,19 +60,24 @@ export default defineComponent({
     locations: {
       type: Array,
       default: () => []
+    },
+    hoveredRegionId: {
+      type: [Number, String],
+      default: null
     }
   },
+  emits: ['region-hover', 'region-select'],
   data() {
     return {
       map: null,
       geoJsonLayer: null,
       geoJsonData: null,
       loadingGeoJson: true,
-      activeLayerInfo: null
+      layerMap: new Map() // maps regency_id -> layer
     }
   },
   computed: {
-    ...mapState(useMacroStore, ['province_id'])
+    ...mapState(useMacroStore, ['province_id', 'commodity_id'])
   },
   async mounted() {
     this.initMap()
@@ -56,9 +100,16 @@ export default defineComponent({
         }
       },
       deep: true
+    },
+    hoveredRegionId(newId, oldId) {
+      if (oldId !== newId) {
+        this.highlightLayerById(oldId, false)
+        this.highlightLayerById(newId, true)
+      }
     }
   },
   methods: {
+    ...mapActions(useMacroStore, ['setProvinceId']),
     initMap() {
       this.map = L.map(this.$refs.mapContainer, {
         zoomControl: false,
@@ -68,6 +119,21 @@ export default defineComponent({
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19
       }).addTo(this.map)
+
+      // Listen for popup button clicks via delegation
+      this.map.on('popupopen', () => {
+        const btn = document.getElementById('map-drilldown-btn')
+        if (btn) {
+          btn.onclick = () => {
+            const provId = btn.getAttribute('data-province-id')
+            if (provId) {
+              this.setProvinceId(parseInt(provId, 10))
+            }
+            const targetCommodityId = this.commodity_id || 1
+            this.$router.push({ name: 'CommodityDetail', params: { id: targetCommodityId } })
+          }
+        }
+      })
     },
     async fetchGeoJson() {
       this.loadingGeoJson = true
@@ -111,10 +177,40 @@ export default defineComponent({
         .replace(/\s+/g, '')
         .replace(/[^a-z0-9]/g, '')
     },
+    highlightLayerById(id, isHighlight) {
+      if (!id || !this.layerMap.has(id)) return
+      const layer = this.layerMap.get(id)
+      if (isHighlight) {
+        layer.setStyle({
+          weight: 3,
+          color: '#34d399', // Emerald glow stroke
+          fillOpacity: 0.95
+        })
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+          layer.bringToFront()
+        }
+      } else {
+        if (this.geoJsonLayer) {
+          this.geoJsonLayer.resetStyle(layer)
+        }
+      }
+    },
+    selectRegionById(id) {
+      if (!id || !this.layerMap.has(id)) return
+      const layer = this.layerMap.get(id)
+      if (layer) {
+        if (layer.getBounds && layer.getBounds().isValid()) {
+          this.map.fitBounds(layer.getBounds(), { padding: [50, 50], maxZoom: 11, animate: true, duration: 0.8 })
+        }
+        layer.openPopup()
+        this.highlightLayerById(id, true)
+      }
+    },
     renderChoropleth() {
       if (this.geoJsonLayer) {
         this.map.removeLayer(this.geoJsonLayer)
       }
+      this.layerMap.clear()
 
       if (!this.map || !this.locations || this.locations.length === 0 || !this.geoJsonData) {
         if (this.map && (!this.province_id || this.province_id === 'all')) {
@@ -123,7 +219,6 @@ export default defineComponent({
         return
       }
 
-      // Zero-Fallback Composite Matching: Build Database Keys
       const dataMap = new Map()
       this.locations.forEach(loc => {
         const provId = loc.province_id
@@ -141,20 +236,17 @@ export default defineComponent({
 
       this.geoJsonLayer = L.geoJSON(this.geoJsonData, {
         style: (feature) => {
-          // Zero-Fallback Composite Matching: Build GeoJSON Keys
           const geoProvId = parseInt(feature.properties.province_id, 10)
           const geoReg = this.normalizeName(feature.properties.name || feature.properties.alt_name)
           
           const geoKey = `${geoProvId}_${geoReg}`
-          
-          // Strict Evaluation: No fuzzy fallback
           const matchedLoc = dataMap.get(geoKey)
 
           if (matchedLoc) {
             feature.properties.matchedData = matchedLoc
             return {
               fillColor: this.getColorForDisparity(matchedLoc.disparity), 
-              weight: 1,
+              weight: 1.5,
               opacity: 1,
               color: '#334155',
               fillOpacity: 0.8
@@ -179,47 +271,73 @@ export default defineComponent({
           if (!feature.properties.matchedData) return
 
           const loc = feature.properties.matchedData
+          if (loc.id) {
+            this.layerMap.set(loc.id, layer)
+          }
+
           const fallbackWarning = loc.isFallback || (!parseFloat(loc.lat))
-            ? `<div class="mt-2 text-[10px] uppercase font-bold text-amber-400 flex items-center gap-1 bg-amber-900/30 px-2 py-1 rounded-sm border border-amber-500/50">
-                 ⚠️ Estimated Location
+            ? `<div class="mt-2 text-[10px] font-medium text-amber-400 flex items-center gap-1 bg-amber-950/60 px-2 py-1 rounded border border-amber-500/40">
+                 ⚠️ Estimated Coordinates
                </div>`
             : ''
 
-          const disparityColor = loc.disparity > 0 ? 'text-red-400' : 'text-emerald-400'
+          const disparityColor = loc.disparity > 0 ? 'text-red-400 bg-red-950/50 border-red-800/50' : 'text-emerald-400 bg-emerald-950/50 border-emerald-800/50'
           const disparityText = loc.disparity !== undefined && loc.disparity !== null 
-            ? `<p class="text-[11px] font-bold tracking-widest mt-1 ${disparityColor}">${loc.disparity > 0 ? '+' : ''}${loc.disparity}% DISPARITY</p>`
+            ? `<div class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${disparityColor} mt-2">
+                ${loc.disparity > 0 ? '+' : ''}${loc.disparity}% DISPARITY
+               </div>`
             : ''
 
-          const tooltipContent = `
-            <div class="font-sans bg-slate-900 text-slate-50 p-2 rounded-sm border border-slate-700 text-left">
-              <h4 class="text-xs font-bold tracking-wider text-slate-300 uppercase">${loc.marketName}</h4>
-              <p class="text-sm font-mono mt-1 text-slate-100">${this.formatCurrency(loc.price)}</p>
-              ${disparityText}
+          const popupContent = `
+            <div class="font-sans bg-slate-900/95 backdrop-blur-md text-slate-100 p-4 rounded-xl border border-slate-700/80 shadow-2xl text-left min-w-[220px]">
+              <div class="border-b border-slate-800 pb-2 mb-2">
+                <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">${loc.provinceName || 'Region'}</span>
+                <h4 class="text-sm font-bold text-white leading-snug">${loc.marketName}</h4>
+              </div>
+              <div class="my-2">
+                <span class="text-[10px] text-slate-400 uppercase font-semibold">Average Price</span>
+                <p class="text-lg font-mono font-bold text-emerald-400 leading-tight">${this.formatCurrency(loc.price)}</p>
+                ${disparityText}
+              </div>
               ${fallbackWarning}
+              <button 
+                id="map-drilldown-btn" 
+                data-province-id="${loc.province_id || ''}" 
+                class="mt-3 w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-xs py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-900/30 group cursor-pointer">
+                <span>View Detailed Analytics</span>
+                <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+              </button>
             </div>
           `
 
-          layer.bindTooltip(tooltipContent, {
-            direction: 'top',
-            sticky: true,
-            className: 'custom-leaflet-tooltip bg-transparent border-none shadow-none p-0'
+          layer.bindPopup(popupContent, {
+            className: 'custom-leaflet-popup'
           })
 
           layer.on({
             mouseover: (e) => {
-              const layer = e.target
-              layer.setStyle({
-                weight: 2,
-                color: '#ffffff',
-                fillOpacity: 0.9
+              const ly = e.target
+              ly.setStyle({
+                weight: 2.5,
+                color: '#34d399',
+                fillOpacity: 0.95
               })
-              layer.bringToFront()
+              if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                ly.bringToFront()
+              }
+              if (loc.id) {
+                this.$emit('region-hover', loc.id)
+              }
             },
             mouseout: (e) => {
-              this.geoJsonLayer.resetStyle(e.target)
+              if (this.hoveredRegionId !== loc.id) {
+                this.geoJsonLayer.resetStyle(e.target)
+              }
+              this.$emit('region-hover', null)
             },
             click: (e) => {
-              this.map.fitBounds(e.target.getBounds(), { padding: [50, 50], maxZoom: 11, animate: true, duration: 1.0 })
+              this.map.fitBounds(e.target.getBounds(), { padding: [50, 50], maxZoom: 11, animate: true, duration: 0.8 })
+              this.$emit('region-select', loc)
             }
           })
           
@@ -230,7 +348,6 @@ export default defineComponent({
       setTimeout(() => {
         if (this.map) {
           this.map.invalidateSize()
-          // Priority: selected province bounds, then global Java+Bali bounds, then fallback to national center
           if (isProvinceFiltered && provinceBounds.isValid()) {
             this.map.fitBounds(provinceBounds, { padding: [20, 20], animate: true, duration: 1.0 })
           } else if (!isProvinceFiltered && globalBounds.isValid()) {
@@ -248,7 +365,20 @@ export default defineComponent({
 </script>
 
 <style>
-.custom-leaflet-tooltip .leaflet-tooltip-tip {
-  border-top-color: #334155;
+.custom-leaflet-popup .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.custom-leaflet-popup .leaflet-popup-content {
+  margin: 0 !important;
+}
+.custom-leaflet-popup .leaflet-popup-tip-container {
+  margin-top: -1px;
+}
+.custom-leaflet-popup .leaflet-popup-tip {
+  background: #0f172a !important;
+  border: 1px solid #334155 !important;
 }
 </style>
