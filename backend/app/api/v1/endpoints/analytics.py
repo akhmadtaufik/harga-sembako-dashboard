@@ -141,7 +141,7 @@ async def get_disparity(request: Request, date_id: date, commodity_id: int, prov
 
 @router.get("/anomalies", response_model=GenericResponseModel[List[AnomalyData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_anomalies(request: Request, date_id: date, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+async def get_anomalies(request: Request, date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Early warning list tracking the Top 5 commodities exceeding their 7-day Moving Average window.
     """
@@ -152,7 +152,7 @@ async def get_anomalies(request: Request, date_id: date, province_id: Optional[i
 
     join_clause = ""
     where_clause = ""
-    params = {"target_date": target_int}
+    params = {"target_date": target_int, "commodity_id": commodity_id}
     
     if province_id is not None:
         join_clause = "JOIN dim_markets m ON f.market_id = m.market_id JOIN dim_regencies r ON m.regency_id = r.regency_id"
@@ -164,40 +164,37 @@ async def get_anomalies(request: Request, date_id: date, province_id: Optional[i
     sql = text(f"""
         WITH DailyAvg AS (
             SELECT 
-                f.commodity_id, 
-                c.commodity_name as commodity_name,
                 f.date_id,
                 AVG(f.price) as current_price
             FROM fact_daily_prices f
-            JOIN dim_commodities c ON f.commodity_id = c.commodity_id
             {join_clause}
-            WHERE f.date_id <= :target_date {where_clause}
-            GROUP BY f.commodity_id, c.commodity_name, f.date_id
+            WHERE f.commodity_id = :commodity_id 
+              AND f.date_id <= :target_date {where_clause}
+            GROUP BY f.date_id
         ),
         MovingAvgs AS (
             SELECT 
-                commodity_id,
-                commodity_name,
                 date_id,
                 current_price,
                 AVG(current_price) OVER (
-                    PARTITION BY commodity_id 
                     ORDER BY date_id 
                     ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
                 ) as moving_average_7d
             FROM DailyAvg
         )
         SELECT 
-            commodity_id,
-            commodity_name,
+            date_id,
             current_price,
             moving_average_7d,
-            ((current_price - moving_average_7d) / NULLIF(moving_average_7d, 0)) * 100 as percentage_difference
+            ((current_price - moving_average_7d) / NULLIF(moving_average_7d, 0)) * 100 as percentage_difference,
+            CASE 
+                WHEN current_price >= moving_average_7d THEN 'Spike'
+                ELSE 'Drop'
+            END as anomaly_type
         FROM MovingAvgs
-        WHERE date_id = :target_date
-          AND moving_average_7d > 0
-          AND current_price > moving_average_7d
-        ORDER BY percentage_difference DESC
+        WHERE moving_average_7d > 0
+          AND ABS(((current_price - moving_average_7d) / NULLIF(moving_average_7d, 0)) * 100) > 0.3
+        ORDER BY date_id DESC
         LIMIT 5;
     """)
 
@@ -207,11 +204,11 @@ async def get_anomalies(request: Request, date_id: date, province_id: Optional[i
     data = []
     for row in rows:
         data.append({
-            "commodity_id": row.commodity_id,
-            "commodity_name": row.commodity_name,
+            "date_id": row.date_id,
             "current_price": row.current_price,
             "moving_average_7d": row.moving_average_7d,
-            "percentage_difference": row.percentage_difference
+            "percentage_difference": row.percentage_difference,
+            "anomaly_type": row.anomaly_type
         })
         
     return GenericResponseModel(success=True, data=data)
