@@ -90,7 +90,7 @@ export default defineComponent({
   },
   async mounted() {
     this.localProvince = this.province_id || 'all'
-    this.localDate = this.date || '2026-07-01'
+    this.localDate = this.date || new Date().toISOString().split('T')[0]
     this.localCommodity = this.commodity_id || 1
     
     try {
