@@ -1,12 +1,18 @@
 import { defineStore } from 'pinia'
 
+const today = new Date()
+const yyyy = today.getFullYear()
+const mm = String(today.getMonth() + 1).padStart(2, '0')
+const dd = String(today.getDate()).padStart(2, '0')
+const formattedToday = `${yyyy}-${mm}-${dd}`
+
 export const useMacroStore = defineStore('macro', {
   state: () => ({
     province_id: null,
     regency_id: null,
     commodity_id: 1,
     commodity_group_id: null,
-    date: '2026-07-01'
+    date: formattedToday
   }),
   actions: {
     setProvinceId(id) {
