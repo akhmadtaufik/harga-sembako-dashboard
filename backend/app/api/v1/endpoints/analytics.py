@@ -21,7 +21,8 @@ from app.models import (
 )
 from app.schemas import (
     GenericResponseModel, SeasonalityData, DisparityData, 
-    AnomalyData, MarketTypeSpreadData, RegionalMatrixData
+    AnomalyData, MarketTypeSpreadData, RegionalMatrixData,
+    MacroAnomalyData
 )
 
 def date_to_int(d: date) -> int:
@@ -205,6 +206,87 @@ async def get_anomalies(request: Request, date_id: date, commodity_id: int, prov
     for row in rows:
         data.append({
             "date_id": row.date_id,
+            "current_price": row.current_price,
+            "moving_average_7d": row.moving_average_7d,
+            "percentage_difference": row.percentage_difference,
+            "anomaly_type": row.anomaly_type
+        })
+        
+    return GenericResponseModel(success=True, data=data)
+
+@router.get("/macro-anomalies", response_model=GenericResponseModel[List[MacroAnomalyData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_macro_anomalies(request: Request, date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+    """
+    Early warning list tracking the Top 5 regencies exceeding their 7-day Moving Average window for a specific commodity on a specific date.
+    """
+    if await check_is_weekend(db, date_id):
+        return GenericResponseModel(success=True, data=[])
+        
+    target_int = date_to_int(date_id)
+
+    province_where_clause = ""
+    params = {"target_date": target_int, "commodity_id": commodity_id}
+    
+    if province_id is not None:
+        province_where_clause = "AND r.province_id = :prov_id"
+        params["prov_id"] = province_id
+
+    sql = text(f"""
+        WITH TargetDate AS (
+            SELECT MAX(date_id) as max_date 
+            FROM fact_daily_prices 
+            WHERE date_id <= :target_date AND commodity_id = :commodity_id
+        ),
+        DailyAvg AS (
+            SELECT 
+                m.regency_id,
+                r.regency_name as regency_name,
+                f.date_id,
+                AVG(f.price) as current_price
+            FROM fact_daily_prices f
+            JOIN dim_markets m ON f.market_id = m.market_id
+            JOIN dim_regencies r ON m.regency_id = r.regency_id
+            WHERE f.commodity_id = :commodity_id 
+              AND f.date_id <= (SELECT max_date FROM TargetDate)
+              {province_where_clause}
+            GROUP BY m.regency_id, r.regency_name, f.date_id
+        ),
+        MovingAvgs AS (
+            SELECT 
+                regency_id,
+                regency_name,
+                date_id,
+                current_price,
+                AVG(current_price) OVER (
+                    PARTITION BY regency_id
+                    ORDER BY date_id 
+                    ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+                ) as moving_average_7d
+            FROM DailyAvg
+        )
+        SELECT 
+            regency_id,
+            regency_name,
+            current_price,
+            moving_average_7d,
+            ((current_price - moving_average_7d) / NULLIF(moving_average_7d, 0)) * 100 as percentage_difference,
+            CASE WHEN current_price >= moving_average_7d THEN 'Spike' ELSE 'Drop' END as anomaly_type
+        FROM MovingAvgs
+        WHERE date_id = (SELECT max_date FROM TargetDate) 
+          AND moving_average_7d > 0
+        ORDER BY ABS(((current_price - moving_average_7d) / NULLIF(moving_average_7d, 0)) * 100) DESC
+        LIMIT 5;
+    """)
+
+    result = await db.execute(sql, params)
+    rows = result.all()
+    
+    data = []
+    for row in rows:
+        data.append({
+            "regency_id": row.regency_id,
+            "regency_name": row.regency_name,
             "current_price": row.current_price,
             "moving_average_7d": row.moving_average_7d,
             "percentage_difference": row.percentage_difference,
