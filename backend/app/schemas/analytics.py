@@ -43,3 +43,13 @@ class MacroAnomalyData(BaseModel):
     moving_average_7d: Decimal
     percentage_difference: Decimal
     anomaly_type: Optional[str] = "Spike"
+
+class VolatilityData(BaseModel):
+    commodity_name: str
+    cv_percentage: Decimal
+
+class HeatmapData(BaseModel):
+    province_name: str
+    commodity_name: str
+    mom_percentage: Decimal
+
