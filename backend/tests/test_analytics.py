@@ -4,8 +4,8 @@ import time
 @pytest.mark.asyncio
 async def test_seasonality_and_spread(auth_client):
     endpoints = [
-        "/api/v1/analytics/seasonality?group_id=1&year=2026",
-        "/api/v1/analytics/spread/market-types?start_date=2026-06-01&end_date=2026-06-07"
+        "/api/v1/analytics/seasonality?commodity_id=1&year=2026",
+        "/api/v1/analytics/spread/market-types?commodity_id=1&start_date=2026-06-01&end_date=2026-06-07"
     ]
     
     for endpoint in endpoints:
@@ -31,11 +31,19 @@ async def test_disparity_and_anomalies(auth_client):
     assert data["success"] is True
     assert isinstance(data["data"], list)
     assert len(data["data"]) <= 5, "Anomalies endpoint returned more than 5 records."
+    
+    # Test Macro Anomalies (Max 5 records validation)
+    response = await auth_client.get("/api/v1/analytics/macro-anomalies?date_id=2026-06-01&commodity_id=1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert isinstance(data["data"], list)
+    assert len(data["data"]) <= 5, "Macro-Anomalies endpoint returned more than 5 records."
 
 @pytest.mark.asyncio
 async def test_cache_miss_vs_hit_latency(auth_client):
     # Wait to ensure no rate-limiting or pending locks interfere
-    endpoint = "/api/v1/analytics/seasonality?group_id=2&year=2026"
+    endpoint = "/api/v1/analytics/seasonality?commodity_id=2&year=2026"
     
     # 1. First execution (Cache Miss)
     start_time_miss = time.perf_counter()
