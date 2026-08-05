@@ -145,42 +145,85 @@
       </section>
 
       <!-- Section 2: Top 5 Price Anomalies Grid -->
-      <section>
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
-          <div class="flex items-center gap-2 group relative z-50 w-max">
-            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Price Anomalies (Top 5)</h2>
-            
-            <!-- Info Icon SVG -->
-            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            
-            <!-- Tooltip Box -->
-            <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-              Menyoroti 5 wilayah kabupaten/kota dengan lonjakan (Spike) atau penurunan (Drop) harga paling ekstrem dibandingkan dengan rata-rata pergerakan harga 7 hari terakhir (7D MA). Fitur ini krusial untuk deteksi dini gejolak pasar lokal.
+      <!-- Section 2: Top 5 Price Anomalies & Volatility Index -->
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Price Anomalies (Half Width) -->
+        <div class="lg:col-span-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
+            <div class="flex items-center gap-2 group relative z-50 w-max">
+              <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Price Anomalies (Top 5)</h2>
+              
+              <!-- Info Icon SVG -->
+              <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              
+              <!-- Tooltip Box -->
+              <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+                Menyoroti 5 wilayah kabupaten/kota dengan lonjakan (Spike) atau penurunan (Drop) harga paling ekstrem dibandingkan dengan rata-rata pergerakan harga 7 hari terakhir (7D MA). Fitur ini krusial untuk deteksi dini gejolak pasar lokal.
+              </div>
+            </div>
+          </div>
+          
+          <!-- Skeleton Loader -->
+          <div v-if="loadingAnomalies" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="i in 5" :key="i" class="animate-pulse bg-slate-800/40 rounded-lg p-4 h-24 border border-slate-700/50"></div>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else-if="anomalies.length === 0" class="flex flex-col items-center justify-center h-24 border border-dashed border-slate-700/60 rounded-lg text-slate-500 text-sm bg-slate-800/20">
+            <span class="block text-slate-400 font-medium">No Data Available</span>
+            <span class="block text-xs mt-0.5 text-slate-500">Data Unavailable for Selected Date Matrix</span>
+          </div>
+
+          <!-- Data Grid -->
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="item in anomalies" :key="item.id" class="bg-slate-800/40 backdrop-blur-md rounded-lg p-4 border border-slate-700/50 flex flex-col justify-between hover:bg-slate-800/70 hover:border-slate-600 transition-all shadow-md">
+              <span class="text-xs font-semibold tracking-wide text-slate-300 truncate" :title="item.name">{{ item.name }}</span>
+              <div class="flex items-end justify-between mt-3">
+                <span class="text-lg font-bold tracking-tight text-slate-100 font-mono">{{ formatCurrency(item.price) }}</span>
+                <span :class="item.trend > 0 ? 'text-red-400 bg-red-950/60 border-red-800/50' : 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50'" class="text-[11px] font-mono font-semibold tracking-tighter px-1.5 py-0.5 rounded border">
+                  {{ item.trend > 0 ? '+' : '' }}{{ item.trend }}%
+                </span>
+              </div>
             </div>
           </div>
         </div>
-        
-        <!-- Skeleton Loader -->
-        <div v-if="loadingAnomalies" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-          <div v-for="i in 5" :key="i" class="animate-pulse bg-slate-800/40 rounded-lg p-4 h-24 border border-slate-700/50"></div>
-        </div>
 
-        <!-- Empty State -->
-        <div v-else-if="anomalies.length === 0" class="flex flex-col items-center justify-center h-24 border border-dashed border-slate-700/60 rounded-lg text-slate-500 text-sm bg-slate-800/20">
-          <span class="block text-slate-400 font-medium">No Data Available</span>
-          <span class="block text-xs mt-0.5 text-slate-500">Data Unavailable for Selected Date Matrix</span>
-        </div>
+        <!-- Volatility Index (Half Width) -->
+        <div class="lg:col-span-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
+            <div class="flex items-center gap-2 group relative z-50 w-max">
+              <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Volatility Index (30D)</h2>
+              
+              <!-- Info Icon SVG -->
+              <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              
+              <!-- Tooltip Box -->
+              <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+                Mengukur tingkat fluktuasi harga komoditas secara nasional dalam 30 hari terakhir menggunakan Koefisien Variasi. Semakin tinggi persentase, semakin rentan rantai pasok komoditas tersebut terhadap gejolak pasar.
+              </div>
+            </div>
+          </div>
 
-        <!-- Data Grid -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-          <div v-for="item in anomalies" :key="item.id" class="bg-slate-800/40 backdrop-blur-md rounded-lg p-4 border border-slate-700/50 flex flex-col justify-between hover:bg-slate-800/70 hover:border-slate-600 transition-all shadow-md">
-            <span class="text-xs font-semibold tracking-wide text-slate-300 truncate" :title="item.name">{{ item.name }}</span>
-            <div class="flex items-end justify-between mt-3">
-              <span class="text-lg font-bold tracking-tight text-slate-100 font-mono">{{ formatCurrency(item.price) }}</span>
-              <span :class="item.trend > 0 ? 'text-red-400 bg-red-950/60 border-red-800/50' : 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50'" class="text-[11px] font-mono font-semibold tracking-tighter px-1.5 py-0.5 rounded border">
-                {{ item.trend > 0 ? '+' : '' }}{{ item.trend }}%
+          <div v-if="loadingVolatility" class="space-y-3">
+             <div v-for="i in 5" :key="i" class="animate-pulse bg-slate-800/40 rounded-lg h-[46px] border border-slate-700/50"></div>
+          </div>
+          
+          <div v-else-if="volatilityData.length === 0" class="flex flex-col items-center justify-center h-24 border border-dashed border-slate-700/60 rounded-lg text-slate-500 text-sm bg-slate-800/20">
+            <span class="block text-slate-400 font-medium">No Data Available</span>
+          </div>
+
+          <div v-else class="space-y-3">
+            <div v-for="item in volatilityData.slice(0,5)" :key="item.commodity_name" class="relative bg-slate-800/40 backdrop-blur-md rounded-lg p-3 border border-slate-700/50 hover:bg-slate-800/70 transition-all shadow-md overflow-hidden flex items-center justify-between z-10 group">
+              <!-- Progress bar background -->
+              <div class="absolute inset-y-0 left-0 bg-red-900/30 group-hover:bg-red-800/40 transition-all -z-10" :style="{ width: ((parseFloat(item.cv_percentage) || 0) / maxVolatilityCV) * 100 + '%' }"></div>
+              
+              <span class="text-xs font-semibold tracking-wide text-slate-300 truncate" :title="item.commodity_name">{{ item.commodity_name }}</span>
+              <span class="text-xs font-mono font-bold text-red-400">
+                {{ Number(item.cv_percentage).toFixed(2) }}%
               </span>
             </div>
           </div>
@@ -349,6 +392,62 @@
            </div>
          </div>
       </section>
+
+      <!-- Section 4: MoM Inflation Heatmap -->
+      <section>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
+          <div class="flex items-center gap-2 group relative z-50 w-max">
+            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">MoM Inflation Heatmap</h2>
+            
+            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            
+            <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+              Matriks inflasi Month-over-Month (MoM) yang membandingkan rata-rata harga bulan ini dengan bulan sebelumnya. Warna merah pekat menunjukkan inflasi ekstrem, sedangkan hijau menunjukkan deflasi atau penurunan harga.
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="loadingHeatmap" class="w-full h-64 animate-pulse bg-slate-800/40 rounded-lg border border-slate-700/50"></div>
+
+        <div v-else-if="heatmapMatrix.commodities.length === 0" class="flex flex-col items-center justify-center h-48 border border-dashed border-slate-700/60 rounded-lg text-slate-500 text-sm bg-slate-800/20">
+          <span class="block text-slate-400 font-medium">No Data Available</span>
+        </div>
+
+        <div v-else class="w-full overflow-x-auto custom-scrollbar border border-slate-700/60 rounded-lg shadow-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-900 border-b border-slate-700/80">
+                <th class="p-3 font-semibold text-slate-300 uppercase tracking-widest bg-slate-900 sticky left-0 z-20 border-r border-slate-700/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)] min-w-[150px]">
+                  Province
+                </th>
+                <th v-for="c in heatmapMatrix.commodities" :key="c" class="p-3 font-medium text-slate-400 whitespace-nowrap border-r border-slate-800/50 last:border-r-0">
+                  {{ c }}
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 bg-slate-800/30">
+              <tr v-for="row in heatmapMatrix.matrix" :key="row.province" class="hover:bg-slate-800/50 transition-colors">
+                <td class="p-3 font-medium text-slate-300 whitespace-nowrap bg-slate-900/90 sticky left-0 z-10 border-r border-slate-700/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                  {{ row.province }}
+                </td>
+                <td v-for="c in heatmapMatrix.commodities" :key="c" 
+                    :class="[
+                      'p-3 font-mono font-medium text-right border-r border-slate-800/50 last:border-r-0',
+                      row[c] !== null && row[c] > 5 ? 'bg-red-500/20 text-red-300' :
+                      row[c] !== null && row[c] > 0 ? 'bg-red-500/10 text-red-200' :
+                      row[c] !== null && row[c] < 0 ? 'bg-emerald-500/20 text-emerald-300' :
+                      row[c] !== null && row[c] === 0 ? 'bg-slate-800/50 text-slate-400' :
+                      'text-slate-600'
+                    ]">
+                  {{ row[c] !== null ? (row[c] > 0 ? '+' : '') + Number(row[c]).toFixed(2) + '%' : '-' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
       
     </div>
   </DashboardLayout>
@@ -373,10 +472,14 @@ export default defineComponent({
       loadingAnomalies: true,
       loadingMap: true,
       loadingMatrix: true,
+      loadingVolatility: true,
+      loadingHeatmap: true,
       anomalies: [],
       regions: [],
       mapData: null,
       matrixData: [],
+      volatilityData: [],
+      heatmapData: [],
       nationalBaselinePrice: 0,
       hoveredRegionId: null,
       regionRefs: {},
@@ -413,6 +516,26 @@ export default defineComponent({
         lowest,
         count: this.regions.length
       }
+    },
+    maxVolatilityCV() {
+      if (!this.volatilityData || this.volatilityData.length === 0) return 1
+      return Math.max(...this.volatilityData.map(d => parseFloat(d.cv_percentage) || 0)) || 1
+    },
+    heatmapMatrix() {
+      if (!this.heatmapData || this.heatmapData.length === 0) return { commodities: [], matrix: [] }
+      const provinces = [...new Set(this.heatmapData.map(d => d.province_name))].sort()
+      const commodities = [...new Set(this.heatmapData.map(d => d.commodity_name))].sort()
+      
+      const matrix = provinces.map(p => {
+        const row = { province: p }
+        commodities.forEach(c => {
+          const match = this.heatmapData.find(d => d.province_name === p && d.commodity_name === c)
+          row[c] = match ? Number(match.mom_percentage) : null
+        })
+        return row
+      })
+      
+      return { commodities, matrix }
     }
   },
   watch: {
@@ -461,11 +584,15 @@ export default defineComponent({
       this.regions = []
       this.mapData = null
       this.matrixData = []
+      this.volatilityData = []
+      this.heatmapData = []
       this.regionRefs = {}
 
       this.loadingAnomalies = true
       this.loadingMap = true
       this.loadingMatrix = true
+      this.loadingVolatility = true
+      this.loadingHeatmap = true
       
       // Cancel pending requests
       if (this.abortController) {
@@ -571,6 +698,40 @@ export default defineComponent({
         this.matrixData = []
       } finally {
         this.loadingMatrix = false
+      }
+
+      try {
+        const volRes = await apiClient.get('/analytics/volatility', {
+          params: { ...payloadParams },
+          signal
+        })
+        if (volRes.data.success && volRes.data.data) {
+          this.volatilityData = volRes.data.data
+        } else {
+          this.volatilityData = []
+        }
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.message !== 'canceled') console.error('Failed to fetch volatility:', err)
+        this.volatilityData = []
+      } finally {
+        this.loadingVolatility = false
+      }
+
+      try {
+        const heatRes = await apiClient.get('/analytics/inflation-heatmap', {
+          params: { date_id: this.date },
+          signal
+        })
+        if (heatRes.data.success && heatRes.data.data) {
+          this.heatmapData = heatRes.data.data
+        } else {
+          this.heatmapData = []
+        }
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.message !== 'canceled') console.error('Failed to fetch heatmap:', err)
+        this.heatmapData = []
+      } finally {
+        this.loadingHeatmap = false
       }
     },
     formatCurrency(value) {
