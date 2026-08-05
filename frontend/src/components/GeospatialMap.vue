@@ -48,11 +48,36 @@
 </template>
 
 <script>
-import { defineComponent } from 'vue'
+import { defineComponent, markRaw } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { mapState, mapActions } from 'pinia'
 import { useMacroStore } from '../store/macro'
+
+/**
+ * Known corrections for DB regency names that don't match GeoJSON alt_name
+ * after simple uppercase conversion. Maps normalized DB name → GeoJSON alt_name.
+ */
+const NAME_CORRECTIONS = Object.freeze({
+  'KABUPATEN KARANGASEM': 'KABUPATEN KARANG ASEM',
+  'KABUPATEN SALATIGA': 'KOTA SALATIGA',
+  'KABUPATEN TANGERANG SELATAN': 'KOTA TANGERANG SELATAN',
+  'KOTA SINGARAJA': 'KABUPATEN BULELENG',
+})
+
+/**
+ * Maps database province_id → BPS standard province code (used in GeoJSON).
+ * DB uses sequential IDs; GeoJSON uses official BPS codes.
+ */
+const DB_TO_BPS_PROVINCE = Object.freeze({
+  11: 36,  // Banten
+  12: 32,  // Jawa Barat
+  13: 31,  // DKI Jakarta
+  14: 33,  // Jawa Tengah
+  15: 34,  // DI Yogyakarta
+  16: 35,  // Jawa Timur
+  17: 51,  // Bali
+})
 
 export default defineComponent({
   name: 'GeospatialMap',
@@ -69,12 +94,18 @@ export default defineComponent({
   emits: ['region-hover', 'region-select'],
   data() {
     return {
-      map: null,
-      geoJsonLayer: null,
-      geoJsonData: null,
-      loadingGeoJson: true,
-      layerMap: new Map() // maps regency_id -> layer
+      // Only truly reactive UI state belongs here
+      loadingGeoJson: true
     }
+  },
+  created() {
+    // Heavy objects stored directly on `this` to bypass Vue's deep Proxy.
+    // Leaflet instances and GeoJSON with thousands of coordinate arrays
+    // must NEVER be deeply reactive — it freezes the main thread.
+    this.map = null
+    this.geoJsonLayer = null
+    this.geoJsonData = null
+    this.layerMap = new Map()
   },
   computed: {
     ...mapState(useMacroStore, ['province_id', 'commodity_id'])
@@ -98,8 +129,10 @@ export default defineComponent({
         if (this.geoJsonData) {
           this.renderChoropleth()
         }
-      },
-      deep: true
+      }
+      // NOTE: deep:true removed — it forced Vue to recursively diff every
+      // location object on each update. The parent replaces the entire array
+      // reference on fetch, so a shallow watch is sufficient.
     },
     hoveredRegionId(newId, oldId) {
       if (oldId !== newId) {
@@ -111,10 +144,12 @@ export default defineComponent({
   methods: {
     ...mapActions(useMacroStore, ['setProvinceId']),
     initMap() {
-      this.map = L.map(this.$refs.mapContainer, {
+      // markRaw prevents Vue from recursively wrapping Leaflet's
+      // internal DOM nodes, canvas layers, and event handlers in Proxies.
+      this.map = markRaw(L.map(this.$refs.mapContainer, {
         zoomControl: false,
         attributionControl: false
-      }).setView([-0.789275, 113.921327], 5)
+      }).setView([-0.789275, 113.921327], 5))
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19
@@ -142,10 +177,12 @@ export default defineComponent({
         if (!response.ok) throw new Error('Failed to load GeoJSON')
         const rawData = await response.json()
         const allowedProvinces = ['31', '32', '33', '34', '35', '36', '51']
-        this.geoJsonData = {
+        // markRaw prevents Vue from wrapping thousands of GeoJSON
+        // coordinate arrays in Proxies (the primary cause of UI freeze).
+        this.geoJsonData = markRaw({
           ...rawData,
           features: rawData.features.filter(f => allowedProvinces.includes(f.properties.province_id))
-        }
+        })
       } catch (err) {
         console.error('GeoJSON Load Error:', err)
       } finally {
@@ -156,26 +193,35 @@ export default defineComponent({
       if (!value) return 'Rp 0'
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
     },
-    getColorForDisparity(disparity) {
-      if (disparity === undefined || disparity === null) return 'transparent'
+    getColorForDisparity(rawDisparity) {
+      if (rawDisparity === undefined || rawDisparity === null) return 'transparent'
+      const disparity = parseFloat(rawDisparity)
+      if (isNaN(disparity)) return 'transparent'
       if (disparity > 15) return '#991b1b' // Deep Crimson (High positive spike)
       if (disparity > 0) return '#f87171'  // Soft Coral (Mild spike)
       if (disparity === 0) return '#475569' // Neutral Slate Gray (Baseline stable)
       return '#10b981' // Emerald Green (Below average)
     },
-    normalizeName(name) {
-      if (!name) return ''
-      return name.toLowerCase()
-        .replace(/kabupaten/g, '')
-        .replace(/kab\./g, '')
-        .replace(/kota/g, '')
-        .replace(/provinsi/g, '')
-        .replace(/prov\./g, '')
-        .replace(/daerah istimewa/g, '')
-        .replace(/di /g, '')
-        .replace(/dki /g, '')
-        .replace(/\s+/g, '')
-        .replace(/[^a-z0-9]/g, '')
+    /**
+     * Normalizes an API regency name to match GeoJSON alt_name format.
+     * Converts to UPPERCASE, expands abbreviations, strips parenthetical
+     * suffixes, and applies known corrections.
+     *
+     * @param {string} apiName - Regency name from the API (e.g., "Kab. Tangerang")
+     * @returns {string} Normalized name matching GeoJSON alt_name (e.g., "KABUPATEN TANGERANG")
+     */
+    normalizeToAltName(apiName) {
+      if (!apiName) return ''
+      let normalized = apiName
+        .toUpperCase()
+        .replace(/\bKAB\.\s*/g, 'KABUPATEN ')
+        .replace(/\bPROV\.\s*/g, 'PROVINSI ')
+        .replace(/\bADM\.\s*/g, 'ADMINISTRASI ')
+        .replace(/\s*\(.*?\)\s*/g, '')  // Strip parenthetical suffixes like "(Solo)"
+        .replace(/\s+/g, ' ')
+        .trim()
+      // Apply known corrections for DB/GeoJSON mismatches
+      return NAME_CORRECTIONS[normalized] || normalized
     },
     highlightLayerById(id, isHighlight) {
       if (!id || !this.layerMap.has(id)) return
@@ -219,13 +265,13 @@ export default defineComponent({
         return
       }
 
+      // Build data map keyed by normalized alt_name (no province_id needed — alt_name is unique)
       const dataMap = new Map()
       this.locations.forEach(loc => {
-        const provId = loc.province_id
         const regName = loc.regency_name || loc.marketName
-        if (!provId || !regName) return
-        const dbKey = `${provId}_${this.normalizeName(regName)}`
-        dataMap.set(dbKey, loc)
+        if (!regName) return
+        const altKey = this.normalizeToAltName(regName)
+        dataMap.set(altKey, loc)
       })
 
       const matchedBounds = L.latLngBounds()
@@ -233,14 +279,16 @@ export default defineComponent({
       const provinceBounds = L.latLngBounds()
       
       const isProvinceFiltered = this.province_id && this.province_id !== 'all'
+      // Convert store's DB province_id to BPS code for GeoJSON comparison
+      const bpsProvinceId = isProvinceFiltered
+        ? DB_TO_BPS_PROVINCE[parseInt(this.province_id, 10)] || parseInt(this.province_id, 10)
+        : null
 
       this.geoJsonLayer = L.geoJSON(this.geoJsonData, {
         style: (feature) => {
-          const geoProvId = parseInt(feature.properties.province_id, 10)
-          const geoReg = this.normalizeName(feature.properties.name || feature.properties.alt_name)
-          
-          const geoKey = `${geoProvId}_${geoReg}`
-          const matchedLoc = dataMap.get(geoKey)
+          // Match against GeoJSON alt_name (always UPPERCASE with full prefix)
+          const geoAltName = (feature.properties.alt_name || '').trim()
+          const matchedLoc = dataMap.get(geoAltName)
 
           if (matchedLoc) {
             feature.properties.matchedData = matchedLoc
@@ -264,7 +312,7 @@ export default defineComponent({
         onEachFeature: (feature, layer) => {
           globalBounds.extend(layer.getBounds())
           
-          if (isProvinceFiltered && parseInt(feature.properties.province_id, 10) === parseInt(this.province_id, 10)) {
+          if (isProvinceFiltered && parseInt(feature.properties.province_id, 10) === bpsProvinceId) {
             provinceBounds.extend(layer.getBounds())
           }
           
@@ -344,6 +392,9 @@ export default defineComponent({
           matchedBounds.extend(layer.getBounds())
         }
       }).addTo(this.map)
+
+      // markRaw the layer to prevent Vue from proxying Leaflet's layer internals
+      this.geoJsonLayer = markRaw(this.geoJsonLayer)
 
       setTimeout(() => {
         if (this.map) {
