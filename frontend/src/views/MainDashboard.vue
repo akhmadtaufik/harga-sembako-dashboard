@@ -6,10 +6,22 @@
       <section>
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
           <div>
-            <h2 class="text-xs font-bold tracking-[0.15em] text-slate-400 uppercase flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Macro Overview & Executive Indicators
-            </h2>
+            <div class="flex items-center gap-2 group relative z-50 w-max">
+              <h2 class="text-xs font-bold tracking-[0.15em] text-slate-400 uppercase flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Macro Overview & Executive Indicators
+              </h2>
+              
+              <!-- Info Icon SVG -->
+              <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              
+              <!-- Tooltip Box -->
+              <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+                Ringkasan metrik eksekutif yang menampilkan rata-rata harga nasional serta wilayah dengan harga tertinggi (Peak) dan terendah (Floor). Berguna untuk pemantauan stabilitas pasar level makro secara instan.
+              </div>
+            </div>
             <p class="text-xs text-slate-500 mt-0.5">Real-time aggregate metric intelligence across monitored regencies</p>
           </div>
           <span class="text-[10px] text-emerald-400 font-mono font-medium bg-emerald-950/60 px-2.5 py-1 rounded-md border border-emerald-900/60 shadow-sm hidden sm:inline-block">
@@ -134,9 +146,21 @@
 
       <!-- Section 2: Top 5 Price Anomalies Grid -->
       <section>
-        <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 mb-4 uppercase border-b border-slate-800 pb-2">
-          Price Anomalies (Top 5)
-        </h2>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
+          <div class="flex items-center gap-2 group relative z-50 w-max">
+            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Price Anomalies (Top 5)</h2>
+            
+            <!-- Info Icon SVG -->
+            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            
+            <!-- Tooltip Box -->
+            <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+              Menyoroti 5 wilayah kabupaten/kota dengan lonjakan (Spike) atau penurunan (Drop) harga paling ekstrem dibandingkan dengan rata-rata pergerakan harga 7 hari terakhir (7D MA). Fitur ini krusial untuk deteksi dini gejolak pasar lokal.
+            </div>
+          </div>
+        </div>
         
         <!-- Skeleton Loader -->
         <div v-if="loadingAnomalies" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
@@ -167,7 +191,19 @@
       <section>
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
           <div>
-            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Geospatial Disparity & Regional Tracking</h2>
+            <div class="flex items-center gap-2 group relative z-50 w-max">
+              <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Geospatial Disparity & Regional Tracking</h2>
+              
+              <!-- Info Icon SVG -->
+              <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              
+              <!-- Tooltip Box -->
+              <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+                Visualisasi geospasial sebaran disparitas harga. Warna kemerahan menunjukkan harga di atas rata-rata nasional (Premium/Spike), sedangkan warna hijau menunjukkan harga di bawah rata-rata (Floor/Drop). Interaksi dengan peta untuk melihat ketimpangan harga spesifik.
+              </div>
+            </div>
             <p class="text-[11px] text-slate-500 mt-0.5">Hover or click map polygon or regional list item for synchronized cross-highlighting & drill-down</p>
           </div>
           <span class="text-[10px] text-slate-400 font-mono bg-slate-800/60 px-2.5 py-1 rounded-md border border-slate-700/50 hidden sm:inline-block">
@@ -203,7 +239,19 @@
           <div class="lg:col-span-4 bg-slate-800/40 backdrop-blur-md border border-slate-700/60 rounded-xl h-[520px] flex flex-col overflow-hidden shadow-2xl">
              <div class="p-4 border-b border-slate-700/50 bg-slate-800/80 flex items-center justify-between sticky top-0 z-10">
                <div>
-                 <h3 class="text-xs font-bold uppercase tracking-widest text-slate-200">Regional Breakdown</h3>
+                 <div class="flex items-center gap-2 group relative z-50 w-max">
+                   <h3 class="text-xs font-bold uppercase tracking-widest text-slate-200">Regional Breakdown</h3>
+                   
+                   <!-- Info Icon SVG -->
+                   <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                   </svg>
+                   
+                   <!-- Tooltip Box -->
+                   <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+                     Daftar perbandingan harga antar kabupaten/kota yang tersinkronisasi dengan peta. Klik pada baris wilayah untuk memusatkan titik peta dan memunculkan opsi menuju analisis mendalam (Micro Deep-Dive).
+                   </div>
+                 </div>
                  <p class="text-[10px] text-slate-400">Click row to center map & open drill-down</p>
                </div>
                <span class="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-900/60 font-semibold">
@@ -255,9 +303,21 @@
       
       <!-- Section 4: Tabbed Technical Regional Averages Spreadsheet Matrix -->
       <section>
-         <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 mb-4 uppercase border-b border-slate-800 pb-2">
-           Regional Averages Matrix (Provincial Aggregates)
-         </h2>
+         <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
+           <div class="flex items-center gap-2 group relative z-50 w-max">
+             <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Regional Averages Matrix (Provincial Aggregates)</h2>
+             
+             <!-- Info Icon SVG -->
+             <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+             
+             <!-- Tooltip Box -->
+             <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+               Tabel agregasi yang merangkum rata-rata harga komoditas pada tingkat provinsi secara makro. Kolom 'Data Records Count' menunjukkan volume data mentah yang berhasil dihimpun dari API pada tanggal matriks yang dipilih untuk memastikan akurasi sampel.
+             </div>
+           </div>
+         </div>
          <div class="bg-slate-800/40 backdrop-blur-md border border-slate-700/60 rounded-xl flex flex-col overflow-hidden shadow-xl">
            <!-- Skeleton Loader -->
            <div v-if="loadingMatrix" class="p-4 space-y-2">
@@ -421,15 +481,15 @@ export default defineComponent({
       
       try {
         // Fetch Anomalies
-        const anomaliesRes = await apiClient.get('/analytics/anomalies', {
-          params: payloadParams,
+        const anomaliesRes = await apiClient.get('/analytics/macro-anomalies', {
+          params: { ...payloadParams, commodity_id: this.commodity_id },
           signal
         })
         
         if (anomaliesRes.data.success && anomaliesRes.data.data) {
           this.anomalies = anomaliesRes.data.data.map(item => ({
-            id: item.commodity_id,
-            name: item.commodity_name,
+            id: item.regency_id,
+            name: item.regency_name,
             price: item.current_price,
             trend: Number(item.percentage_difference).toFixed(2)
           }))
