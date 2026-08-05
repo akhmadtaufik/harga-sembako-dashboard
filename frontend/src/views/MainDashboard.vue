@@ -177,16 +177,27 @@
           </div>
 
           <!-- Data Grid -->
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="item in anomalies" :key="item.id" class="bg-slate-800/40 backdrop-blur-md rounded-lg p-4 border border-slate-700/50 flex flex-col justify-between hover:bg-slate-800/70 hover:border-slate-600 transition-all shadow-md">
-              <span class="text-xs font-semibold tracking-wide text-slate-300 truncate" :title="item.name">{{ item.name }}</span>
-              <div class="flex items-end justify-between mt-3">
-                <span class="text-lg font-bold tracking-tight text-slate-100 font-mono">{{ formatCurrency(item.price) }}</span>
-                <span :class="item.trend > 0 ? 'text-red-400 bg-red-950/60 border-red-800/50' : 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50'" class="text-[11px] font-mono font-semibold tracking-tighter px-1.5 py-0.5 rounded border">
-                  {{ item.trend > 0 ? '+' : '' }}{{ item.trend }}%
-                </span>
-              </div>
-            </div>
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="text-[10px] text-slate-500 uppercase tracking-wider border-b border-slate-700/50">
+                  <th class="pb-2 font-medium">Regency</th>
+                  <th class="pb-2 font-medium text-right">Current</th>
+                  <th class="pb-2 font-medium text-right">7D Avg</th>
+                  <th class="pb-2 font-medium text-right">Dev (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="anomaly in anomalies" :key="anomaly.regency_name" class="border-b border-slate-700/30 last:border-0 hover:bg-slate-700/20 transition-colors">
+                  <td class="py-3 text-sm text-slate-200 font-medium">{{ anomaly.regency_name }}</td>
+                  <td class="py-3 text-sm text-slate-100 text-right">{{ formatNumber(anomaly.current_price) }}</td>
+                  <td class="py-3 text-sm text-slate-400 text-right">{{ formatNumber(anomaly.moving_average_7d) }}</td>
+                  <td :class="['py-3 text-sm font-bold text-right', anomaly.percentage_difference > 0 ? 'text-red-400' : 'text-emerald-400']">
+                    {{ anomaly.percentage_difference > 0 ? '+' : '' }}{{ parseFloat(anomaly.percentage_difference).toFixed(1) }}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -217,15 +228,33 @@
           </div>
 
           <div v-else class="space-y-3">
-            <div v-for="item in volatilityData.slice(0,5)" :key="item.commodity_name" class="relative bg-slate-800/40 backdrop-blur-md rounded-lg p-3 border border-slate-700/50 hover:bg-slate-800/70 transition-all shadow-md overflow-hidden flex items-center justify-between z-10 group">
+            <div 
+              v-for="item in topVolatilityData" 
+              :key="item.commodity_name"
+              class="relative bg-slate-800/40 backdrop-blur-md rounded-lg p-3 border hover:bg-slate-800/70 transition-all shadow-md overflow-hidden flex items-center justify-between z-10 group"
+              :class="item.borderBg"
+            >
               <!-- Progress bar background -->
-              <div class="absolute inset-y-0 left-0 bg-red-900/30 group-hover:bg-red-800/40 transition-all -z-10" :style="{ width: ((parseFloat(item.cv_percentage) || 0) / maxVolatilityCV) * 100 + '%' }"></div>
+              <div 
+                class="absolute inset-y-0 left-0 transition-all duration-500 pointer-events-none -z-10"
+                :class="item.barBg"
+                :style="{ width: ((item.numericCv || 0) / maxVolatilityCV) * 100 + '%' }"
+              ></div>
               
-              <span class="text-xs font-semibold tracking-wide text-slate-300 truncate" :title="item.commodity_name">{{ item.commodity_name }}</span>
-              <span class="text-xs font-mono font-bold text-red-400">
-                {{ Number(item.cv_percentage).toFixed(2) }}%
+              <div class="relative z-10 flex items-center gap-2 overflow-hidden mr-2">
+                <span class="text-xs font-semibold tracking-wide text-slate-300 truncate" :title="item.commodity_name">{{ item.commodity_name }}</span>
+                <span :class="['text-[9px] px-1.5 py-0.5 rounded font-mono font-bold border shrink-0', item.badgeBg]">
+                  {{ item.level }}
+                </span>
+              </div>
+              <span :class="['text-xs font-mono font-bold shrink-0', item.textColor]">
+                {{ item.numericCv.toFixed(2) }}%
               </span>
             </div>
+            
+            <button @click="isVolatilityModalOpen = true" class="w-full mt-3 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 rounded transition-colors text-center border border-dashed border-slate-700">
+              See Full Index
+            </button>
           </div>
         </div>
       </section>
@@ -449,6 +478,47 @@
         </div>
       </section>
       
+      <!-- Volatility Full Index Modal -->
+      <div v-if="isVolatilityModalOpen" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+          
+          <!-- Modal Header -->
+          <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
+            <h3 class="text-sm font-bold tracking-widest text-slate-200 uppercase">Complete Volatility Index (30D)</h3>
+            <button @click="isVolatilityModalOpen = false" class="text-slate-400 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal Body (Scrollable) -->
+          <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-3">
+             <div 
+               v-for="item in processedVolatilityData" 
+               :key="item.commodity_name"
+               class="relative bg-slate-800/40 backdrop-blur-md rounded-lg p-3 border hover:bg-slate-800/70 transition-all shadow-md overflow-hidden flex items-center justify-between z-10 group"
+               :class="item.borderBg"
+             >
+                <div 
+                  class="absolute inset-y-0 left-0 transition-all duration-500 pointer-events-none -z-10" 
+                  :class="item.barBg" 
+                  :style="{ width: ((item.numericCv || 0) / maxVolatilityCV) * 100 + '%' }"
+                ></div>
+                <div class="relative z-10 flex items-center gap-2 overflow-hidden mr-2">
+                  <span class="text-xs font-semibold tracking-wide text-slate-300 truncate" :title="item.commodity_name">{{ item.commodity_name }}</span>
+                  <span :class="['text-[9px] px-1.5 py-0.5 rounded font-mono font-bold border shrink-0', item.badgeBg]">
+                    {{ item.level }}
+                  </span>
+                </div>
+                <span :class="['text-xs font-mono font-bold shrink-0', item.textColor]">
+                  {{ item.numericCv.toFixed(2) }}%
+                </span>
+             </div>
+          </div>
+        </div>
+      </div>
+      
     </div>
   </DashboardLayout>
 </template>
@@ -483,7 +553,8 @@ export default defineComponent({
       nationalBaselinePrice: 0,
       hoveredRegionId: null,
       regionRefs: {},
-      abortController: null
+      abortController: null,
+      isVolatilityModalOpen: false
     }
   },
   computed: {
@@ -518,8 +589,59 @@ export default defineComponent({
       }
     },
     maxVolatilityCV() {
-      if (!this.volatilityData || this.volatilityData.length === 0) return 1
-      return Math.max(...this.volatilityData.map(d => parseFloat(d.cv_percentage) || 0)) || 1
+      if (!this.processedVolatilityData || this.processedVolatilityData.length === 0) return 1
+      return Math.max(...this.processedVolatilityData.map(d => d.numericCv || 0)) || 1
+    },
+    processedVolatilityData() {
+      if (!this.volatilityData || this.volatilityData.length === 0) return [];
+      
+      const cvValues = this.volatilityData
+        .map(d => parseFloat(d.cv_percentage))
+        .filter(v => !isNaN(v))
+        .sort((a, b) => a - b);
+        
+      if (cvValues.length === 0) return [];
+
+      const p33Index = Math.floor(cvValues.length * 0.333);
+      const p67Index = Math.floor(cvValues.length * 0.667);
+      const p33 = cvValues[p33Index] || 5.0;
+      const p67 = cvValues[p67Index] || 15.0;
+
+      return this.volatilityData.map(item => {
+        const cv = parseFloat(item.cv_percentage);
+        let level = 'LOW';
+        let textColor = 'text-emerald-400';
+        let barBg = 'bg-emerald-500/30';
+        let borderBg = 'border-emerald-500/30';
+        let badgeBg = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+
+        if (cv >= p67) {
+          level = 'HIGH';
+          textColor = 'text-rose-400';
+          barBg = 'bg-rose-500/30';
+          borderBg = 'border-rose-500/30';
+          badgeBg = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+        } else if (cv >= p33) {
+          level = 'MEDIUM';
+          textColor = 'text-amber-400';
+          barBg = 'bg-amber-500/30';
+          borderBg = 'border-amber-500/30';
+          badgeBg = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+        }
+
+        return {
+          ...item,
+          numericCv: cv,
+          level,
+          textColor,
+          barBg,
+          borderBg,
+          badgeBg
+        };
+      });
+    },
+    topVolatilityData() {
+      return this.processedVolatilityData.slice(0, 5);
     },
     heatmapMatrix() {
       if (!this.heatmapData || this.heatmapData.length === 0) return { commodities: [], matrix: [] }
@@ -553,6 +675,11 @@ export default defineComponent({
   },
   methods: {
     ...mapActions(useMacroStore, ['setProvinceId']),
+    formatNumber(value) {
+      if (!value) return '0'
+      const roundedValue = Math.round(parseFloat(value))
+      return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(roundedValue)
+    },
     handleMapRegionHover(regionId) {
       this.hoveredRegionId = regionId
       if (regionId && this.regionRefs[regionId]) {
@@ -618,7 +745,11 @@ export default defineComponent({
             id: item.regency_id,
             name: item.regency_name,
             price: item.current_price,
-            trend: Number(item.percentage_difference).toFixed(2)
+            trend: Number(item.percentage_difference).toFixed(2),
+            regency_name: item.regency_name,
+            current_price: item.current_price,
+            moving_average_7d: item.moving_average_7d,
+            percentage_difference: item.percentage_difference
           }))
         } else {
           this.anomalies = []
