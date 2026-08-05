@@ -410,8 +410,7 @@ async def get_volatility(request: Request, date_id: date, province_id: Optional[
             commodity_name,
             (std_price / NULLIF(mean_price, 0)) * 100 as cv_percentage
         FROM Stats
-        ORDER BY cv_percentage DESC
-        LIMIT 10;
+        ORDER BY cv_percentage DESC;
     """)
 
     result = await db.execute(sql, params)
