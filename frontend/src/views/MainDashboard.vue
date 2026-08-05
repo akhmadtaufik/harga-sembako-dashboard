@@ -568,18 +568,28 @@ export default defineComponent({
           count: 0
         }
       }
-      let highest = this.regions[0]
-      let lowest = this.regions[0]
+      
+      let highest = null
+      let lowest = null
       let sum = 0
+      let validCount = 0
 
       this.regions.forEach(r => {
         const val = parseFloat(r.average) || 0
-        sum += val
-        if (val > (parseFloat(highest.average) || 0)) highest = r
-        if (val < (parseFloat(lowest.average) || Number.MAX_VALUE)) lowest = r
+        if (val > 0) {
+          sum += val
+          validCount++
+          
+          if (!highest || val > parseFloat(highest.average)) {
+            highest = r
+          }
+          if (!lowest || val < parseFloat(lowest.average)) {
+            lowest = r
+          }
+        }
       })
 
-      const nationalAvg = this.nationalBaselinePrice || (this.regions.length ? sum / this.regions.length : 0)
+      const nationalAvg = this.nationalBaselinePrice || (validCount ? sum / validCount : 0)
 
       return {
         nationalAvg,
