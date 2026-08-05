@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +22,7 @@ from app.models import (
 from app.schemas import (
     GenericResponseModel, SeasonalityData, DisparityData, 
     AnomalyData, MarketTypeSpreadData, RegionalMatrixData,
-    MacroAnomalyData
+    MacroAnomalyData, VolatilityData, HeatmapData
 )
 
 def date_to_int(d: date) -> int:
@@ -373,4 +373,107 @@ async def get_regional_matrix(request: Request, date_id: date, commodity_id: int
             "record_count": row.record_count
         })
         
+    return GenericResponseModel(success=True, data=data)
+
+@router.get("/volatility", response_model=GenericResponseModel[List[VolatilityData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_volatility(request: Request, date_id: date, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+    """
+    Calculate the Coefficient of Variation for commodities over the last 30 days.
+    """
+    target_int = date_to_int(date_id)
+    start_int = date_to_int(date_id - timedelta(days=30))
+
+    join_clause = ""
+    where_clause = ""
+    params = {"target_date": target_int, "start_date": start_int}
+
+    if province_id is not None:
+        join_clause = "JOIN dim_markets m ON f.market_id = m.market_id JOIN dim_regencies r ON m.regency_id = r.regency_id"
+        where_clause = "AND r.province_id = :prov_id"
+        params["prov_id"] = province_id
+
+    sql = text(f"""
+        WITH Stats AS (
+            SELECT 
+                c.commodity_name,
+                AVG(f.price) as mean_price,
+                STDDEV_POP(f.price) as std_price
+            FROM fact_daily_prices f
+            JOIN dim_commodities c ON f.commodity_id = c.commodity_id
+            {join_clause}
+            WHERE f.date_id BETWEEN :start_date AND :target_date {where_clause}
+            GROUP BY c.commodity_name
+            HAVING COUNT(f.price) > 5
+        )
+        SELECT 
+            commodity_name,
+            (std_price / NULLIF(mean_price, 0)) * 100 as cv_percentage
+        FROM Stats
+        ORDER BY cv_percentage DESC
+        LIMIT 10;
+    """)
+
+    result = await db.execute(sql, params)
+    rows = result.all()
+    
+    data = [{"commodity_name": r.commodity_name, "cv_percentage": r.cv_percentage or 0} for r in rows]
+    return GenericResponseModel(success=True, data=data)
+
+@router.get("/inflation-heatmap", response_model=GenericResponseModel[List[HeatmapData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_inflation_heatmap(request: Request, date_id: date, db: AsyncSession = Depends(get_db)):
+    """
+    Calculate the Month-over-Month percentage difference for each Province & Commodity.
+    """
+    start_int = date_to_int(date_id - timedelta(days=90))
+    target_int = date_to_int(date_id)
+
+    sql = text("""
+        WITH MonthlyAvg AS (
+            SELECT 
+                p.province_name as province_name,
+                c.commodity_name,
+                DATE_TRUNC('month', TO_DATE(f.date_id::text, 'YYYYMMDD')) as month_date,
+                AVG(f.price) as avg_price
+            FROM fact_daily_prices f
+            JOIN dim_markets m ON f.market_id = m.market_id
+            JOIN dim_regencies r ON m.regency_id = r.regency_id
+            JOIN dim_provinces p ON r.province_id = p.province_id
+            JOIN dim_commodities c ON f.commodity_id = c.commodity_id
+            WHERE f.date_id BETWEEN :start_date AND :target_date
+            GROUP BY p.province_name, c.commodity_name, month_date
+        ),
+        MoM_Calc AS (
+            SELECT 
+                province_name,
+                commodity_name,
+                month_date,
+                avg_price as current_price,
+                LAG(avg_price) OVER (PARTITION BY province_name, commodity_name ORDER BY month_date) as prev_price
+            FROM MonthlyAvg
+        ),
+        RankedMoM AS (
+            SELECT 
+                province_name,
+                commodity_name,
+                ((current_price - prev_price) / NULLIF(prev_price, 0)) * 100 as mom_percentage,
+                ROW_NUMBER() OVER (PARTITION BY province_name, commodity_name ORDER BY month_date DESC) as rn
+            FROM MoM_Calc
+            WHERE prev_price IS NOT NULL
+        )
+        SELECT province_name, commodity_name, mom_percentage
+        FROM RankedMoM
+        WHERE rn = 1;
+    """)
+
+    result = await db.execute(sql, {"start_date": start_int, "target_date": target_int})
+    rows = result.all()
+    
+    data = [{
+        "province_name": r.province_name,
+        "commodity_name": r.commodity_name,
+        "mom_percentage": r.mom_percentage or 0
+    } for r in rows]
+    
     return GenericResponseModel(success=True, data=data)
