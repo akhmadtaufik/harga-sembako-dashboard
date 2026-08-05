@@ -35,3 +35,11 @@ class RegionalMatrixData(BaseModel):
     province_name: str
     average_price: Optional[Decimal]
     record_count: int
+
+class MacroAnomalyData(BaseModel):
+    regency_id: int
+    regency_name: str
+    current_price: Decimal
+    moving_average_7d: Decimal
+    percentage_difference: Decimal
+    anomaly_type: Optional[str] = "Spike"
