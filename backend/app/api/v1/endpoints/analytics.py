@@ -22,7 +22,8 @@ from app.models import (
 from app.schemas import (
     GenericResponseModel, SeasonalityData, DisparityData, 
     AnomalyData, MarketTypeSpreadData, RegionalMatrixData,
-    MacroAnomalyData, VolatilityData, HeatmapData
+    MacroAnomalyData, VolatilityData, HeatmapData,
+    AffordabilityBasketData, SupplyChainMarginData
 )
 
 def date_to_int(d: date) -> int:
@@ -474,5 +475,116 @@ async def get_inflation_heatmap(request: Request, date_id: date, db: AsyncSessio
         "commodity_name": r.commodity_name,
         "mom_percentage": r.mom_percentage or 0
     } for r in rows]
+    
+    return GenericResponseModel(success=True, data=data)
+
+from fastapi import Query
+
+@router.get("/affordability-basket", response_model=GenericResponseModel[List[AffordabilityBasketData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_affordability_basket(
+    request: Request, 
+    date_id: date, 
+    commodity_ids: str = Query(..., description="Comma-separated list of commodity IDs"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Calculate the total cost of a predefined group of commodities across different regions (Provinces) on a specific date.
+    """
+    target_int = date_to_int(date_id)
+    
+    # Parse commodity_ids
+    try:
+        comm_ids = [int(cid.strip()) for cid in commodity_ids.split(",") if cid.strip()]
+    except ValueError:
+        return GenericResponseModel(success=False, data=[], message="Invalid commodity_ids format")
+        
+    if not comm_ids:
+        return GenericResponseModel(success=True, data=[])
+
+    sql = text("""
+        WITH RegionalPrices AS (
+            SELECT 
+                p.province_id,
+                p.province_name,
+                f.commodity_id,
+                AVG(f.price) as avg_price
+            FROM fact_daily_prices f
+            JOIN dim_markets m ON f.market_id = m.market_id
+            JOIN dim_regencies r ON m.regency_id = r.regency_id
+            JOIN dim_provinces p ON r.province_id = p.province_id
+            WHERE f.date_id = :target_date
+              AND f.commodity_id = ANY(:comm_ids)
+            GROUP BY p.province_id, p.province_name, f.commodity_id
+        )
+        SELECT 
+            province_name,
+            SUM(avg_price) as total_cost
+        FROM RegionalPrices
+        GROUP BY province_id, province_name
+        ORDER BY total_cost DESC;
+    """)
+
+    result = await db.execute(sql, {"target_date": target_int, "comm_ids": comm_ids})
+    rows = result.all()
+    
+    data = [{"province_name": r.province_name, "total_cost": r.total_cost} for r in rows]
+    return GenericResponseModel(success=True, data=data)
+
+@router.get("/supply-chain-margin", response_model=GenericResponseModel[SupplyChainMarginData])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_supply_chain_margin(
+    request: Request, 
+    date_id: date, 
+    commodity_id: int, 
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Calculate the 30-day average price accumulation and margins across the supply chain nodes:
+    Produsen -> Pedagang Besar -> Pasar Tradisional / Pasar Modern.
+    """
+    target_int = date_to_int(date_id)
+    start_int = date_to_int(date_id - timedelta(days=30))
+
+    sql = text("""
+        SELECT 
+            mt.market_type_name,
+            AVG(f.price) as avg_price
+        FROM fact_daily_prices f
+        JOIN dim_markets m ON f.market_id = m.market_id
+        JOIN dim_market_types mt ON m.market_type_id = mt.market_type_id
+        WHERE f.date_id BETWEEN :start_date AND :target_date
+          AND f.commodity_id = :commodity_id
+        GROUP BY mt.market_type_name;
+    """)
+
+    result = await db.execute(sql, {"start_date": start_int, "target_date": target_int, "commodity_id": commodity_id})
+    rows = result.all()
+    
+    # Map raw prices to supply chain nodes
+    prices = {r.market_type_name: r.avg_price or 0 for r in rows}
+    
+    produsen_price = prices.get("Produsen", 0)
+    wholesale_price = prices.get("Pedagang Besar", 0)
+    trad_price = prices.get("Pasar Tradisional", 0)
+    modern_price = prices.get("Pasar Modern", 0)
+    
+    # Fallback missing data conceptually
+    if wholesale_price == 0:
+        wholesale_price = produsen_price
+    if trad_price == 0:
+        trad_price = wholesale_price
+    if modern_price == 0:
+        modern_price = wholesale_price
+
+    data = SupplyChainMarginData(
+        producer_price=produsen_price,
+        wholesale_price=wholesale_price,
+        margin_wholesale=wholesale_price - produsen_price,
+        traditional_retail_price=trad_price,
+        margin_traditional=trad_price - wholesale_price,
+        modern_retail_price=modern_price,
+        margin_modern=modern_price - wholesale_price
+    )
     
     return GenericResponseModel(success=True, data=data)
