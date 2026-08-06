@@ -65,3 +65,28 @@ async def test_cache_miss_vs_hit_latency(auth_client):
     assert latency_hit_ms < 50, f"Cache Hit latency {latency_hit_ms:.2f}ms exceeded the 50ms threshold."
     # Validate cache is indeed faster than initial request
     assert latency_hit_ms < latency_miss_ms, f"Cache Hit {latency_hit_ms:.2f}ms was not faster than Miss {latency_miss_ms:.2f}ms"
+
+@pytest.mark.asyncio
+async def test_predictive_trajectory(auth_client):
+    response = await auth_client.get(
+        "/api/v1/analytics/predictive-trajectory?commodity_id=1&regency_id=1"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    if len(data["data"]) > 0:
+        first_row = data["data"][0]
+        assert "date_id" in first_row
+
+@pytest.mark.asyncio
+async def test_cross_correlation(auth_client):
+    response = await auth_client.get(
+        "/api/v1/analytics/correlation?commodity_id=1&regency_id=1"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    if len(data["data"]) > 0:
+        first_row = data["data"][0]
+        assert "commodity_name" in first_row
+        assert "correlation_score" in first_row
