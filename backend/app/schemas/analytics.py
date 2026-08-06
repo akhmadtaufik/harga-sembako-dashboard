@@ -65,3 +65,14 @@ class SupplyChainMarginData(BaseModel):
     margin_traditional: Decimal
     modern_retail_price: Decimal
     margin_modern: Decimal
+
+class PredictiveTrajectoryData(BaseModel):
+    date_id: date
+    actual_price: Optional[Decimal] = None
+    forecast_price: Optional[Decimal] = None
+    upper_bound: Optional[Decimal] = None
+    lower_bound: Optional[Decimal] = None
+
+class CrossCorrelationData(BaseModel):
+    commodity_name: str
+    correlation_score: Decimal
