@@ -130,6 +130,73 @@
         </div>
       </section>
 
+      <!-- Micro Deep-Dive Analysis (Section 6) -->
+      <section class="mt-8">
+        <div class="mb-5 border-b border-slate-800 pb-2 flex justify-between items-center relative">
+          <div class="flex items-center gap-2 group">
+            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Micro Deep-Dive Analysis</h2>
+            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <!-- Regency Selector for Micro Deep-Dive -->
+          <div>
+            <select
+              v-model="selectedRegencyId"
+              class="w-64 bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2 custom-select"
+              @change="fetchMicroDeepDive"
+            >
+              <option value="" disabled selected>
+                {{ loadingRegencies ? 'Loading regencies...' : '-- Select a Regency --' }}
+              </option>
+              <option v-for="r in regencyList" :key="r.regency_id" :value="r.regency_id">{{ r.name }}</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Predictive Price Trajectory Chart -->
+          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm p-4 flex flex-col relative min-h-[420px]">
+            <div class="flex items-center gap-2 group mb-2">
+              <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Predictive Price Trajectory (14D)</h3>
+              <svg class="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="absolute left-4 top-8 w-80 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[60] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+                <strong>Deskripsi:</strong> Proyeksi estimasi harga 14 hari ke depan menggunakan algoritma Linear Regression berdasarkan tren historis dan musiman 90 hari terakhir.<br><br>
+                <strong>Interpretasi:</strong> Garis solid adalah data aktual. Garis putus-putus adalah estimasi. Area berarsir (Confidence Interval) menunjukkan rentang ketidakpastian; semakin lebar area, semakin tinggi volatilitas harga.
+              </div>
+            </div>
+            <div class="flex-1 w-full relative">
+              <PredictiveTrajectoryChart 
+                :data="predictiveData" 
+                :loading="loadingPredictive" 
+              />
+            </div>
+          </div>
+
+          <!-- Cross-Commodity Correlation Radar -->
+          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm p-4 flex flex-col relative min-h-[420px]">
+            <div class="flex items-center gap-2 group mb-2">
+              <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Cross-Commodity Correlation (90D)</h3>
+              <svg class="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="absolute left-4 top-8 w-80 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[60] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+                <strong>Deskripsi:</strong> Analisis koefisien korelasi Pearson untuk mengukur sejauh mana pergerakan harga komoditas utama mempengaruhi komoditas substitusi/komplementer di pasar lokal yang sama.<br><br>
+                <strong>Interpretasi:</strong> Skala 0.0 hingga 1.0. Nilai di atas 0.70 menunjukkan hubungan yang sangat kuat (efek domino). Jika harga beras naik, komoditas dengan korelasi tinggi kemungkinan besar akan mengikuti.
+              </div>
+            </div>
+            <div class="flex-1 w-full relative">
+              <CrossCorrelationRadar 
+                :data="correlationData" 
+                :loading="loadingCorrelation" 
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </DashboardLayout>
 </template>
@@ -140,13 +207,17 @@ import { mapState } from 'pinia'
 import { useMacroStore } from '../store/macro'
 import DashboardLayout from '../components/DashboardLayout.vue'
 import TrendAnalyticsChart from '../components/TrendAnalyticsChart.vue'
+import PredictiveTrajectoryChart from '../components/PredictiveTrajectoryChart.vue'
+import CrossCorrelationRadar from '../components/CrossCorrelationRadar.vue'
 import apiClient from '../plugins/axios'
 
 export default defineComponent({
   name: 'CommodityDetail',
   components: {
     DashboardLayout,
-    TrendAnalyticsChart
+    TrendAnalyticsChart,
+    PredictiveTrajectoryChart,
+    CrossCorrelationRadar
   },
   data() {
     return {
@@ -161,7 +232,16 @@ export default defineComponent({
       seasonalitySeries: [],
       seriesData: null,
       historicalAnomalies: [],
-      abortController: null
+      abortController: null,
+      
+      // Micro Deep-Dive State
+      regencyList: [],
+      selectedRegencyId: "",
+      predictiveData: [],
+      correlationData: [],
+      loadingPredictive: false,
+      loadingCorrelation: false,
+      loadingRegencies: false
     }
   },
   computed: {
@@ -169,11 +249,18 @@ export default defineComponent({
   },
   watch: {
     date: 'fetchDetailData',
-    province_id: 'fetchDetailData',
-    commodity_id: 'fetchDetailData'
+    province_id() {
+      this.fetchDetailData()
+      this.fetchRegencies()
+    },
+    commodity_id() {
+      this.fetchDetailData()
+      this.fetchMicroDeepDive()
+    }
   },
   mounted() {
     this.fetchDetailData()
+    this.fetchRegencies()
   },
   beforeUnmount() {
     if (this.abortController) {
@@ -330,6 +417,72 @@ export default defineComponent({
           console.error('Failed to fetch historical anomalies:', err)
         }
         this.historicalAnomalies = []
+      }
+    },
+    async fetchRegencies() {
+      try {
+        this.loadingRegencies = true
+        const payload = {}
+        if (this.province_id && this.province_id !== 'all') {
+          payload.province_id = this.province_id
+        }
+        
+        const res = await apiClient.get('/locations/regencies', { params: payload })
+        if (res.data.success) {
+          this.regencyList = res.data.data
+          // Reset selection if the current one is no longer in the list
+          if (this.selectedRegencyId && !this.regencyList.find(r => r.regency_id === this.selectedRegencyId)) {
+            this.selectedRegencyId = ""
+            this.predictiveData = []
+            this.correlationData = []
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch regencies:', err)
+      } finally {
+        this.loadingRegencies = false
+      }
+    },
+    async fetchMicroDeepDive() {
+      if (!this.selectedRegencyId || !this.commodity_id) return
+      
+      this.loadingPredictive = true
+      this.loadingCorrelation = true
+      
+      try {
+        // Fetch Predictive Trajectory
+        const predRes = await apiClient.get('/analytics/predictive-trajectory', {
+          params: {
+            commodity_id: this.commodity_id,
+            regency_id: this.selectedRegencyId
+          }
+        })
+        if (predRes.data.success) {
+          this.predictiveData = predRes.data.data
+        }
+      } catch (err) {
+        console.error('Failed to fetch predictive trajectory:', err)
+        this.predictiveData = []
+      } finally {
+        this.loadingPredictive = false
+      }
+      
+      try {
+        // Fetch Cross Correlation
+        const corrRes = await apiClient.get('/analytics/correlation', {
+          params: {
+            commodity_id: this.commodity_id,
+            regency_id: this.selectedRegencyId
+          }
+        })
+        if (corrRes.data.success) {
+          this.correlationData = corrRes.data.data
+        }
+      } catch (err) {
+        console.error('Failed to fetch cross correlation:', err)
+        this.correlationData = []
+      } finally {
+        this.loadingCorrelation = false
       }
     },
     formatCurrency(value) {
