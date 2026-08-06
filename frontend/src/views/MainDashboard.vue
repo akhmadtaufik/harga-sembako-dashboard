@@ -19,7 +19,8 @@
               
               <!-- Tooltip Box -->
               <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-                Ringkasan metrik eksekutif yang menampilkan rata-rata harga nasional serta wilayah dengan harga tertinggi (Peak) dan terendah (Floor). Berguna untuk pemantauan stabilitas pasar level makro secara instan.
+                <strong>Deskripsi:</strong> Ringkasan metrik eksekutif yang menampilkan rata-rata harga nasional serta wilayah dengan harga tertinggi (Peak) dan terendah (Floor).<br><br>
+                <strong>Interpretasi:</strong> Berguna untuk pemantauan stabilitas pasar level makro secara instan dan mengidentifikasi batas atas serta batas bawah pergerakan harga.
               </div>
             </div>
             <p class="text-xs text-slate-500 mt-0.5">Real-time aggregate metric intelligence across monitored regencies</p>
@@ -160,7 +161,8 @@
               
               <!-- Tooltip Box -->
               <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-                Menyoroti 5 wilayah kabupaten/kota dengan lonjakan (Spike) atau penurunan (Drop) harga paling ekstrem dibandingkan dengan rata-rata pergerakan harga 7 hari terakhir (7D MA). Fitur ini krusial untuk deteksi dini gejolak pasar lokal.
+                <strong>Deskripsi:</strong> Menyoroti 5 wilayah kabupaten/kota dengan lonjakan (Spike) atau penurunan (Drop) harga paling ekstrem dibandingkan dengan rata-rata pergerakan harga 7 hari terakhir (7D MA).<br><br>
+                <strong>Interpretasi:</strong> Fitur ini krusial untuk deteksi dini gejolak pasar lokal, memungkinkan intervensi cepat pada wilayah yang berpotensi mengalami kelangkaan atau syok harga.
               </div>
             </div>
           </div>
@@ -214,7 +216,8 @@
               
               <!-- Tooltip Box -->
               <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-                Mengukur tingkat fluktuasi harga komoditas secara nasional dalam 30 hari terakhir menggunakan Koefisien Variasi. Semakin tinggi persentase, semakin rentan rantai pasok komoditas tersebut terhadap gejolak pasar.
+                <strong>Deskripsi:</strong> Mengukur tingkat fluktuasi harga komoditas secara nasional dalam 30 hari terakhir menggunakan perhitungan Koefisien Variasi (CV).<br><br>
+                <strong>Interpretasi:</strong> Semakin tinggi persentase, semakin fluktuatif dan rentan rantai pasok komoditas tersebut terhadap gejolak pasar. Berguna untuk memetakan tingkat risiko komoditas (Low/Medium/High).
               </div>
             </div>
           </div>
@@ -273,7 +276,8 @@
               
               <!-- Tooltip Box -->
               <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-                Visualisasi geospasial sebaran disparitas harga. Warna kemerahan menunjukkan harga di atas rata-rata nasional (Premium/Spike), sedangkan warna hijau menunjukkan harga di bawah rata-rata (Floor/Drop). Interaksi dengan peta untuk melihat ketimpangan harga spesifik.
+                <strong>Deskripsi:</strong> Visualisasi geospasial sebaran tingkat disparitas harga di seluruh wilayah pemantauan.<br><br>
+                <strong>Interpretasi:</strong> Warna kemerahan menunjukkan harga di atas rata-rata nasional (Premium/Spike), sedangkan warna hijau menunjukkan harga di bawah rata-rata (Floor/Drop). Berinteraksi dengan peta membantu menemukan ketimpangan pasokan secara visual dan spasial.
               </div>
             </div>
             <p class="text-[11px] text-slate-500 mt-0.5">Hover or click map polygon or regional list item for synchronized cross-highlighting & drill-down</p>
@@ -321,7 +325,8 @@
                    
                    <!-- Tooltip Box -->
                    <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-                     Daftar perbandingan harga antar kabupaten/kota yang tersinkronisasi dengan peta. Klik pada baris wilayah untuk memusatkan titik peta dan memunculkan opsi menuju analisis mendalam (Micro Deep-Dive).
+                     <strong>Deskripsi:</strong> Daftar perbandingan rata-rata harga antar kabupaten/kota yang tersinkronisasi secara dua arah (bidirectional) dengan peta geospasial.<br><br>
+                     <strong>Interpretasi:</strong> Klik pada baris wilayah untuk memusatkan titik peta secara otomatis, memberikan kemudahan akses untuk melakukan analisis mendalam (Micro Deep-Dive) pada daerah tersebut.
                    </div>
                  </div>
                  <p class="text-[10px] text-slate-400">Click row to center map & open drill-down</p>
@@ -386,7 +391,8 @@
              
              <!-- Tooltip Box -->
              <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-               Tabel agregasi yang merangkum rata-rata harga komoditas pada tingkat provinsi secara makro. Kolom 'Data Records Count' menunjukkan volume data mentah yang berhasil dihimpun dari API pada tanggal matriks yang dipilih untuk memastikan akurasi sampel.
+               <strong>Deskripsi:</strong> Tabel agregasi yang merangkum rata-rata harga komoditas pada tingkat provinsi secara makro beserta jumlah rekam data (Data Records Count).<br><br>
+               <strong>Interpretasi:</strong> Berguna untuk membandingkan harga antar provinsi. Kolom 'Data Records Count' digunakan untuk memvalidasi volume data mentah yang dihimpun guna memastikan akurasi dan representasi sampel statistik pada tanggal yang dipilih.
              </div>
            </div>
          </div>
@@ -433,7 +439,8 @@
             </svg>
             
             <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
-              Matriks inflasi Month-over-Month (MoM) yang membandingkan rata-rata harga bulan ini dengan bulan sebelumnya. Warna merah pekat menunjukkan inflasi ekstrem, sedangkan hijau menunjukkan deflasi atau penurunan harga.
+              <strong>Deskripsi:</strong> Matriks inflasi Month-over-Month (MoM) yang membandingkan rata-rata harga komoditas bulan ini dengan bulan sebelumnya di berbagai provinsi.<br><br>
+              <strong>Interpretasi:</strong> Warna merah pekat menunjukkan tingkat inflasi ekstrem (kenaikan harga drastis), sedangkan hijau menunjukkan deflasi (penurunan harga). Membantu memantau tren inflasi pangan secara visual dan komparatif antar wilayah.
             </div>
           </div>
         </div>
@@ -478,6 +485,65 @@
         </div>
       </section>
       
+      <!-- Section 5: Affordability & Supply Chain -->
+      <section class="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
+        <!-- Affordability Basket -->
+        <div class="bg-slate-800/40 backdrop-blur-md border border-slate-700/60 rounded-xl flex flex-col overflow-hidden shadow-xl">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-2 group relative z-50 w-max">
+              <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Affordability Basket</h2>
+              
+              <!-- Info Icon SVG -->
+              <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              
+              <!-- Tooltip Box -->
+              <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+                <strong>Deskripsi:</strong> Analisis biaya total dari komoditas bahan pokok esensial yang dipilih (keranjang) di berbagai provinsi.<br><br>
+                <strong>Interpretasi:</strong> Digunakan untuk mengukur tingkat daya beli masyarakat antar wilayah. Wilayah dengan total biaya keranjang lebih rendah (bar lebih pendek) mengindikasikan tingkat keterjangkauan harga sembako yang lebih baik bagi konsumen.
+              </div>
+            </div>
+          </div>
+          <div class="p-4 border-b border-slate-700/50 bg-slate-900/50 flex flex-wrap gap-2">
+            <button 
+              v-for="item in staticCommodities" 
+              :key="item.id"
+              @click="toggleBasketCommodity(item.id)"
+              :class="basket_commodity_ids.includes(item.id) ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-slate-800 text-slate-400 border-slate-700'"
+              class="px-3 py-1 text-[10px] font-bold tracking-wider uppercase rounded-full border transition-colors"
+            >
+              {{ item.name }}
+            </button>
+          </div>
+          <div class="p-4">
+            <AffordabilityBasket :data="basketData" :loading="loadingBasket" />
+          </div>
+        </div>
+
+        <!-- Supply Chain Waterfall -->
+        <div class="bg-slate-800/40 backdrop-blur-md border border-slate-700/60 rounded-xl flex flex-col overflow-hidden shadow-xl">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-2 group relative z-50 w-max">
+              <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Supply Chain Margin Waterfall (30D Avg)</h2>
+              
+              <!-- Info Icon SVG -->
+              <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              
+              <!-- Tooltip Box -->
+              <div class="absolute right-0 md:left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[100] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case leading-relaxed">
+                <strong>Deskripsi:</strong> Visualisasi akumulasi harga dan margin dari tingkat Produsen hingga Konsumen (Pasar Tradisional & Modern) menggunakan rata-rata pergerakan harga 30 hari terakhir.<br><br>
+                <strong>Interpretasi:</strong> Batang pertama yang penuh ke bawah adalah Harga Dasar. Batang melayang berikutnya adalah "Margin" atau selisih harga yang ditambahkan pada titik rantai pasok tersebut. Membantu mendeteksi anomali di titik mana (misal: Grosir ke Retailer) terjadi eksploitasi margin tertinggi.
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <SupplyChainWaterfall :data="waterfallData" :loading="loadingWaterfall" />
+          </div>
+        </div>
+      </section>
       <!-- Volatility Full Index Modal -->
       <div v-if="isVolatilityModalOpen" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
         <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
@@ -527,15 +593,19 @@
 import { defineComponent } from 'vue'
 import { mapState, mapActions } from 'pinia'
 import { useMacroStore } from '../store/macro'
+import apiClient from '../plugins/axios'
 import DashboardLayout from '../components/DashboardLayout.vue'
 import GeospatialMap from '../components/GeospatialMap.vue'
-import apiClient from '../plugins/axios'
+import AffordabilityBasket from '../components/AffordabilityBasket.vue'
+import SupplyChainWaterfall from '../components/SupplyChainWaterfall.vue'
 
 export default defineComponent({
   name: 'MainDashboard',
   components: {
     DashboardLayout,
-    GeospatialMap
+    GeospatialMap,
+    AffordabilityBasket,
+    SupplyChainWaterfall
   },
   data() {
     return {
@@ -554,11 +624,27 @@ export default defineComponent({
       hoveredRegionId: null,
       regionRefs: {},
       abortController: null,
-      isVolatilityModalOpen: false
+      isVolatilityModalOpen: false,
+      loadingBasket: true,
+      basketData: [],
+      loadingWaterfall: true,
+      waterfallData: null,
+      staticCommodities: [
+        { id: 11, name: 'Bawang Merah' },
+        { id: 12, name: 'Bawang Putih' },
+        { id: 1, name: 'Beras Kualitas Bawah' },
+        { id: 3, name: 'Beras Kualitas Medium' },
+        { id: 13, name: 'Cabai Merah Besar' },
+        { id: 14, name: 'Cabai Merah Keriting' },
+        { id: 7, name: 'Daging Ayam' },
+        { id: 21, name: 'Gula Pasir Lokal' },
+        { id: 17, name: 'Minyak Goreng Curah' },
+        { id: 10, name: 'Telur Ayam' }
+      ]
     }
   },
   computed: {
-    ...mapState(useMacroStore, ['province_id', 'date', 'commodity_id']),
+    ...mapState(useMacroStore, ['province_id', 'date', 'commodity_id', 'basket_commodity_ids']),
     kpiStats() {
       if (!this.regions || this.regions.length === 0) {
         return {
@@ -671,12 +757,26 @@ export default defineComponent({
     }
   },
   watch: {
-    province_id: 'fetchData',
-    date: 'fetchData',
-    commodity_id: 'fetchData'
+    province_id: 'fetchAll',
+    date: {
+      handler() {
+        this.fetchAll()
+      }
+    },
+    commodity_id: {
+      handler() {
+        this.fetchAll()
+      }
+    },
+    basket_commodity_ids: {
+      deep: true,
+      handler() {
+        this.fetchBasketData()
+      }
+    }
   },
   mounted() {
-    this.fetchData()
+    this.fetchAll()
   },
   beforeUnmount() {
     if (this.abortController) {
@@ -684,7 +784,63 @@ export default defineComponent({
     }
   },
   methods: {
-    ...mapActions(useMacroStore, ['setProvinceId']),
+    ...mapActions(useMacroStore, ['setProvinceId', 'setBasketCommodityIds']),
+    
+    toggleBasketCommodity(id) {
+      let current = [...this.basket_commodity_ids]
+      if (current.includes(id)) {
+        current = current.filter(c => c !== id)
+      } else {
+        current.push(id)
+      }
+      this.setBasketCommodityIds(current)
+    },
+    
+    async fetchBasketData() {
+      this.loadingBasket = true
+      try {
+        const ids = this.basket_commodity_ids.join(',')
+        if (!ids) {
+          this.basketData = []
+          return
+        }
+        const res = await apiClient.get('/analytics/affordability-basket', {
+          params: {
+            date_id: this.date,
+            commodity_ids: ids
+          }
+        })
+        this.basketData = res.data.data
+      } catch (e) {
+        console.error(e)
+      } finally {
+        this.loadingBasket = false
+      }
+    },
+    
+    async fetchWaterfallData() {
+      this.loadingWaterfall = true
+      try {
+        const res = await apiClient.get('/analytics/supply-chain-margin', {
+          params: {
+            date_id: this.date,
+            commodity_id: this.commodity_id
+          }
+        })
+        this.waterfallData = res.data.data
+      } catch (e) {
+        console.error(e)
+      } finally {
+        this.loadingWaterfall = false
+      }
+    },
+
+    fetchAll() {
+      this.fetchData()
+      this.fetchBasketData()
+      this.fetchWaterfallData()
+    },
+
     formatNumber(value) {
       if (!value) return '0'
       const roundedValue = Math.round(parseFloat(value))
