@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from decimal import Decimal
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,8 @@ from app.schemas import (
     GenericResponseModel, SeasonalityData, DisparityData, 
     AnomalyData, MarketTypeSpreadData, RegionalMatrixData,
     MacroAnomalyData, VolatilityData, HeatmapData,
-    AffordabilityBasketData, SupplyChainMarginData
+    AffordabilityBasketData, SupplyChainMarginData,
+    PredictiveTrajectoryData, CrossCorrelationData
 )
 
 def date_to_int(d: date) -> int:
@@ -588,3 +589,179 @@ async def get_supply_chain_margin(
     )
     
     return GenericResponseModel(success=True, data=data)
+@router.get("/predictive-trajectory", response_model=GenericResponseModel[List[PredictiveTrajectoryData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_predictive_trajectory(
+    commodity_id: int,
+    regency_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    import pandas as pd
+    import numpy as np
+    
+    # 1. Fetch 90 days of history
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=90)
+    
+    end_date_int = date_to_int(end_date)
+    start_date_int = date_to_int(start_date)
+    
+    query = (
+        select(
+            FactDailyPrice.date_id,
+            func.avg(FactDailyPrice.price).label("avg_price")
+        )
+        .join(DimMarket, FactDailyPrice.market_id == DimMarket.market_id)
+        .where(
+            FactDailyPrice.commodity_id == commodity_id,
+            DimMarket.regency_id == regency_id,
+            FactDailyPrice.date_id >= start_date_int,
+            FactDailyPrice.date_id <= end_date_int,
+            FactDailyPrice.price > 0
+        )
+        .group_by(FactDailyPrice.date_id)
+        .order_by(FactDailyPrice.date_id)
+    )
+    
+    result = await db.execute(query)
+    rows = result.fetchall()
+    
+    if not rows:
+        return GenericResponseModel(success=True, data=[])
+        
+    df = pd.DataFrame([{"date_id": str(r.date_id), "price": float(r.avg_price)} for r in rows])
+    df["date_id"] = pd.to_datetime(df["date_id"], format="%Y%m%d")
+    df = df.set_index("date_id").asfreq("D")
+    df["price"] = df["price"].interpolate(method="linear")
+    
+    # Calculate Linear Regression (numpy.polyfit)
+    x = np.arange(len(df))
+    y = df["price"].values
+    
+    if len(df) < 2:
+        return GenericResponseModel(success=True, data=[])
+        
+    coefficients = np.polyfit(x, y, 1)
+    poly_func = np.poly1d(coefficients)
+    
+    # Forecast 14 days
+    last_date = df.index[-1]
+    forecast_dates = [last_date + timedelta(days=i) for i in range(1, 15)]
+    x_forecast = np.arange(len(df), len(df) + 14)
+    y_forecast = poly_func(x_forecast)
+    
+    output = []
+    
+    # Append Actuals
+    for i, (idx, row) in enumerate(df.iterrows()):
+        output.append(
+            PredictiveTrajectoryData(
+                date_id=idx.date(),
+                actual_price=Decimal(str(round(row["price"])))
+            )
+        )
+        
+    # Append Forecasts with confidence bounds
+    for i, (f_date, f_price) in enumerate(zip(forecast_dates, y_forecast)):
+        # Expand confidence bound linearly from 2% to 5% over 14 days
+        conf_pct = 0.02 + (i / 13) * 0.03
+        upper = f_price * (1 + conf_pct)
+        lower = f_price * (1 - conf_pct)
+        
+        output.append(
+            PredictiveTrajectoryData(
+                date_id=f_date.date(),
+                forecast_price=Decimal(str(round(f_price))),
+                upper_bound=Decimal(str(round(upper))),
+                lower_bound=Decimal(str(round(lower)))
+            )
+        )
+        
+    return GenericResponseModel(success=True, data=output)
+
+
+@router.get("/correlation", response_model=GenericResponseModel[List[CrossCorrelationData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_cross_correlation(
+    commodity_id: int,
+    regency_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    import pandas as pd
+    
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=90)
+    
+    end_date_int = date_to_int(end_date)
+    start_date_int = date_to_int(start_date)
+    
+    query = (
+        select(
+            FactDailyPrice.date_id,
+            DimCommodity.name.label("commodity_name"),
+            DimCommodity.commodity_id,
+            func.avg(FactDailyPrice.price).label("avg_price")
+        )
+        .join(DimMarket, FactDailyPrice.market_id == DimMarket.market_id)
+        .join(DimCommodity, FactDailyPrice.commodity_id == DimCommodity.commodity_id)
+        .where(
+            DimMarket.regency_id == regency_id,
+            FactDailyPrice.date_id >= start_date_int,
+            FactDailyPrice.date_id <= end_date_int,
+            FactDailyPrice.price > 0
+        )
+        .group_by(FactDailyPrice.date_id, DimCommodity.commodity_id, DimCommodity.name)
+    )
+    
+    result = await db.execute(query)
+    rows = result.fetchall()
+    
+    if not rows:
+        return GenericResponseModel(success=True, data=[])
+        
+    # Build DataFrame
+    df = pd.DataFrame([{
+        "date_id": r.date_id,
+        "commodity_id": r.commodity_id,
+        "commodity_name": r.commodity_name,
+        "price": float(r.avg_price)
+    } for r in rows])
+    
+    # Check if target commodity exists in the regency
+    target_name = df[df["commodity_id"] == commodity_id]["commodity_name"].unique()
+    if len(target_name) == 0:
+        return GenericResponseModel(success=True, data=[])
+    target_name = target_name[0]
+    
+    # Pivot to get dates as rows and commodities as columns
+    pivot_df = df.pivot_table(index="date_id", columns="commodity_name", values="price")
+    
+    # Drop commodities with too much missing data
+    min_periods = int(len(pivot_df) * 0.5)
+    pivot_df = pivot_df.dropna(axis=1, thresh=min_periods)
+    
+    if target_name not in pivot_df.columns:
+        return GenericResponseModel(success=True, data=[])
+        
+    # Interpolate remaining missing values linearly
+    pivot_df = pivot_df.interpolate(method="linear").fillna(method="bfill").fillna(method="ffill")
+    
+    # Calculate Pearson Correlation
+    corr_matrix = pivot_df.corr(method="pearson")
+    target_corr = corr_matrix[target_name].drop(target_name, errors="ignore")
+    
+    # Filter top 5 absolute correlations to surface substitutes/complements
+    top_corr = target_corr.abs().sort_values(ascending=False).head(5)
+    
+    output = []
+    for comm_name in top_corr.index:
+        score = target_corr[comm_name]
+        if not pd.isna(score):
+            output.append(
+                CrossCorrelationData(
+                    commodity_name=comm_name,
+                    correlation_score=Decimal(str(round(score, 4)))
+                )
+            )
+            
+    return GenericResponseModel(success=True, data=output)
