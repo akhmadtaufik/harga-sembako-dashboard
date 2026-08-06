@@ -12,7 +12,8 @@ export const useMacroStore = defineStore('macro', {
     regency_id: null,
     commodity_id: 1,
     commodity_group_id: null,
-    date: formattedToday
+    date: formattedToday,
+    basket_commodity_ids: [11, 12, 1, 3, 13, 14, 7, 21, 17, 10] // Default basket
   }),
   actions: {
     setProvinceId(id) {
@@ -29,6 +30,9 @@ export const useMacroStore = defineStore('macro', {
     },
     setDate(date) {
       this.date = date
+    },
+    setBasketCommodityIds(ids) {
+      this.basket_commodity_ids = ids
     }
   }
 })
