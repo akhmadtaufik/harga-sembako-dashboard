@@ -53,3 +53,15 @@ class HeatmapData(BaseModel):
     commodity_name: str
     mom_percentage: Decimal
 
+class AffordabilityBasketData(BaseModel):
+    province_name: str
+    total_cost: Decimal
+
+class SupplyChainMarginData(BaseModel):
+    producer_price: Decimal
+    wholesale_price: Decimal
+    margin_wholesale: Decimal
+    traditional_retail_price: Decimal
+    margin_traditional: Decimal
+    modern_retail_price: Decimal
+    margin_modern: Decimal
