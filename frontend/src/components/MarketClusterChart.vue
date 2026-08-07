@@ -106,21 +106,15 @@ const updateChart = () => {
   const option = {
     backgroundColor: 'transparent',
     tooltip: {
-      backgroundColor: '#0f172a',
-      borderColor: '#334155',
-      textStyle: {
-        color: '#f8fafc',
-        fontFamily: 'inherit',
-        fontSize: 12
-      },
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      borderColor: 'rgba(51, 65, 85, 0.5)',
+      textStyle: { color: '#e2e8f0' },
       formatter: function (param) {
-        const [avgPrice, volatility, anomalies, marketName] = param.data
         return `
-          <div class="font-bold border-b border-slate-700 pb-1 mb-1">${marketName}</div>
-          <div class="flex justify-between gap-4"><span class="text-slate-400">Cluster:</span> <span>${param.seriesName}</span></div>
-          <div class="flex justify-between gap-4"><span class="text-slate-400">Avg Price:</span> <span>${formatCurrency(avgPrice)}</span></div>
-          <div class="flex justify-between gap-4"><span class="text-slate-400">Volatility:</span> <span>${formatNumber(volatility)}</span></div>
-          <div class="flex justify-between gap-4"><span class="text-slate-400">Anomalies:</span> <span>${anomalies}</span></div>
+          <div class="font-bold text-gray-100">${param.data[3]}</div>
+          <div class="text-sm text-gray-400 mt-1">Cluster: <span class="font-semibold" style="color: ${param.color}">${param.seriesName}</span></div>
+          <div class="text-sm text-gray-300 mt-1">Avg Price: Rp ${param.data[0].toLocaleString('id-ID')}</div>
+          <div class="text-sm text-gray-300">Volatility: ${param.data[1].toFixed(2)}</div>
         `
       }
     },
