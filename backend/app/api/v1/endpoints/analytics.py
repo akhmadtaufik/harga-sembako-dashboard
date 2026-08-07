@@ -39,11 +39,20 @@ async def check_is_weekend(db: AsyncSession, target_date: date) -> bool:
     is_weekend = result.scalar_one_or_none()
     return bool(is_weekend)
 
-@router.get("/seasonality", response_model=GenericResponseModel[List[SeasonalityData]])
+@router.get(
+    "/seasonality", 
+    response_model=GenericResponseModel[List[SeasonalityData]],
+    summary="Get Seasonality Time-Series",
+    response_description="A list of daily average prices for the specified commodity and year.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_seasonality(request: Request, commodity_id: int, year: int, db: AsyncSession = Depends(get_db)):
     """
     Aggregate prices by day for time-series trends based on a specific commodity.
+    
+    ### Analytics Methodology
+    Calculates the national average price per day for a specific year to expose cyclical patterns and seasonal harvesting effects.
     """
     query = (
         select(
@@ -62,11 +71,20 @@ async def get_seasonality(request: Request, commodity_id: int, year: int, db: As
     data = [{"date_id": row.date_id, "avg_price": row.avg_price} for row in rows]
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/disparity", response_model=GenericResponseModel[List[DisparityData]])
+@router.get(
+    "/disparity", 
+    response_model=GenericResponseModel[List[DisparityData]],
+    summary="Get Regional Price Disparity",
+    response_description="A list of regencies with their average price and disparity against the national baseline.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_disparity(request: Request, date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Compare regional averages against the national baseline for the Choropleth map layer.
+    
+    ### Analytics Methodology
+    Computes the percentage difference between a specific regency\'s daily average price and the national average price. Disparity > 0 indicates premium pricing.
     """
     if await check_is_weekend(db, date_id):
         return GenericResponseModel(success=True, data=[])
@@ -142,11 +160,20 @@ async def get_disparity(request: Request, date_id: date, commodity_id: int, prov
         
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/anomalies", response_model=GenericResponseModel[List[AnomalyData]])
+@router.get(
+    "/anomalies", 
+    response_model=GenericResponseModel[List[AnomalyData]],
+    summary="Get Commodity Historical Anomalies",
+    response_description="A list of the top 5 historical anomalies (spikes or drops) for a commodity.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_anomalies(request: Request, date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
-    Early warning list tracking the Top 5 commodities exceeding their 7-day Moving Average window.
+    Early warning list tracking historical price anomalies.
+    
+    ### Analytics Methodology
+    Uses a 7-Day Moving Average (7D MA) baseline. An anomaly is flagged if the current daily price deviates from the 7D MA by more than a predefined threshold. Classifies deviations as `Spike` or `Drop`.
     """
     if await check_is_weekend(db, date_id):
         return GenericResponseModel(success=True, data=[])
@@ -216,11 +243,20 @@ async def get_anomalies(request: Request, date_id: date, commodity_id: int, prov
         
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/macro-anomalies", response_model=GenericResponseModel[List[MacroAnomalyData]])
+@router.get(
+    "/macro-anomalies", 
+    response_model=GenericResponseModel[List[MacroAnomalyData]],
+    summary="Get Regional Macro Anomalies",
+    response_description="A list of the top 5 regencies experiencing the highest price deviations today.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_macro_anomalies(request: Request, date_id: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Early warning list tracking the Top 5 regencies exceeding their 7-day Moving Average window for a specific commodity on a specific date.
+    
+    ### Analytics Methodology
+    Aggregates prices per regency and calculates the 7-Day Moving Average. Sorts regencies by the absolute percentage difference to highlight areas with extreme supply chain shocks.
     """
     if await check_is_weekend(db, date_id):
         return GenericResponseModel(success=True, data=[])
@@ -297,11 +333,20 @@ async def get_macro_anomalies(request: Request, date_id: date, commodity_id: int
         
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/spread/market-types", response_model=GenericResponseModel[List[MarketTypeSpreadData]])
+@router.get(
+    "/spread/market-types", 
+    response_model=GenericResponseModel[List[MarketTypeSpreadData]],
+    summary="Get Market Type Spread Analysis",
+    response_description="A time-series list comparing average prices across different market types.",
+    tags=["Micro Deep-Dive Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_market_type_spread(request: Request, start_date: date, end_date: date, commodity_id: int, regency_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Calculate structural pricing spreads between Traditional, Modern, Wholesaler, and Producer classifications for a specific commodity.
+    
+    ### Analytics Methodology
+    Groups daily prices by Market Type. The UI calculates the margin premium using the formula: `((Modern - Traditional) / Traditional) * 100`. A widening margin indicates high retail premiums or supply disparities.
     """
     start_int = date_to_int(start_date)
     end_int = date_to_int(end_date)
@@ -336,11 +381,20 @@ async def get_market_type_spread(request: Request, start_date: date, end_date: d
     data = [{"date_id": row.date_id, "market_type_name": row.market_type_name, "avg_price": row.avg_price} for row in rows]
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/regional-matrix", response_model=GenericResponseModel[List[RegionalMatrixData]])
+@router.get(
+    "/regional-matrix", 
+    response_model=GenericResponseModel[List[RegionalMatrixData]],
+    summary="Get Regional Averages Matrix",
+    response_description="A list of provincial average prices and data point counts.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_regional_matrix(request: Request, date_id: date, commodity_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get aggregated regional averages matrix data.
+    
+    ### Analytics Methodology
+    Rolls up market-level price data to the Provincial level, returning both the average price and the count of records to assess data density and reliability.
     """
     target_int = date_to_int(date_id)
 
@@ -377,11 +431,20 @@ async def get_regional_matrix(request: Request, date_id: date, commodity_id: int
         
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/volatility", response_model=GenericResponseModel[List[VolatilityData]])
+@router.get(
+    "/volatility", 
+    response_model=GenericResponseModel[List[VolatilityData]],
+    summary="Get Commodity Volatility Index",
+    response_description="A ranked list of commodities by their 30-day volatility index.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_volatility(request: Request, date_id: date, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Calculate the Coefficient of Variation for commodities over the last 30 days.
+    
+    ### Analytics Methodology
+    Uses the Coefficient of Variation (CV) formula: `(Standard Deviation / Mean) * 100`. This normalizes volatility across commodities with drastically different base prices (e.g., Beef vs. Rice), allowing for an apples-to-apples risk comparison.
     """
     target_int = date_to_int(date_id)
     start_int = date_to_int(date_id - timedelta(days=30))
@@ -421,11 +484,20 @@ async def get_volatility(request: Request, date_id: date, province_id: Optional[
     data = [{"commodity_name": r.commodity_name, "cv_percentage": r.cv_percentage or 0} for r in rows]
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/inflation-heatmap", response_model=GenericResponseModel[List[HeatmapData]])
+@router.get(
+    "/inflation-heatmap", 
+    response_model=GenericResponseModel[List[HeatmapData]],
+    summary="Get Month-over-Month Inflation Heatmap",
+    response_description="A matrix of MoM price changes for commodities across provinces.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_inflation_heatmap(request: Request, date_id: date, db: AsyncSession = Depends(get_db)):
     """
     Calculate the Month-over-Month percentage difference for each Province & Commodity.
+    
+    ### Analytics Methodology
+    Truncates dates to the month level, averages the prices, and uses SQL Window Functions (`LAG`) to compute the percentage difference between the current month and the previous month.
     """
     start_int = date_to_int(date_id - timedelta(days=90))
     target_int = date_to_int(date_id)
@@ -481,7 +553,13 @@ async def get_inflation_heatmap(request: Request, date_id: date, db: AsyncSessio
 
 from fastapi import Query
 
-@router.get("/affordability-basket", response_model=GenericResponseModel[List[AffordabilityBasketData]])
+@router.get(
+    "/affordability-basket", 
+    response_model=GenericResponseModel[List[AffordabilityBasketData]],
+    summary="Get Regional Affordability Basket",
+    response_description="The total cost of a custom basket of goods per province.",
+    tags=["Macro Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_affordability_basket(
     request: Request, 
@@ -491,6 +569,9 @@ async def get_affordability_basket(
 ):
     """
     Calculate the total cost of a predefined group of commodities across different regions (Provinces) on a specific date.
+    
+    ### Analytics Methodology
+    Sums the average prices of a dynamic list of commodities for each province. Used to measure the purchasing power parity and basic living costs across regions.
     """
     target_int = date_to_int(date_id)
     
@@ -532,7 +613,13 @@ async def get_affordability_basket(
     data = [{"province_name": r.province_name, "total_cost": r.total_cost} for r in rows]
     return GenericResponseModel(success=True, data=data)
 
-@router.get("/supply-chain-margin", response_model=GenericResponseModel[SupplyChainMarginData])
+@router.get(
+    "/supply-chain-margin", 
+    response_model=GenericResponseModel[SupplyChainMarginData],
+    summary="Get Supply Chain Margin Analysis",
+    response_description="Average prices and margins across the 4 major supply chain nodes.",
+    tags=["Micro Deep-Dive Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_supply_chain_margin(
     request: Request, 
@@ -543,6 +630,9 @@ async def get_supply_chain_margin(
     """
     Calculate the 30-day average price accumulation and margins across the supply chain nodes:
     Produsen -> Pedagang Besar -> Pasar Tradisional / Pasar Modern.
+    
+    ### Analytics Methodology
+    Averages the last 30 days of data grouped by Market Type. Calculates the absolute margin added at each step of the supply chain to identify bottlenecks or price gouging.
     """
     target_int = date_to_int(date_id)
     start_int = date_to_int(date_id - timedelta(days=30))
@@ -589,13 +679,25 @@ async def get_supply_chain_margin(
     )
     
     return GenericResponseModel(success=True, data=data)
-@router.get("/predictive-trajectory", response_model=GenericResponseModel[List[PredictiveTrajectoryData]])
+@router.get(
+    "/predictive-trajectory", 
+    response_model=GenericResponseModel[List[PredictiveTrajectoryData]],
+    summary="Get Predictive Price Trajectory (14D)",
+    response_description="A list containing 90 days of historical actuals and 14 days of linear regression forecasts.",
+    tags=["Micro Deep-Dive Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_predictive_trajectory(
     commodity_id: int,
     regency_id: int,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    Forecast the next 14 days of prices for a commodity in a specific regency.
+    
+    ### Analytics Methodology
+    Extracts the last 90 days of prices, interpolates missing dates, and applies a degree-1 Polynomial Fit (Linear Regression) via Numpy to project the next 14 days. An expanding confidence interval (2% to 5%) is applied to denote increasing uncertainty over time.
+    """
     import pandas as pd
     import numpy as np
     
@@ -680,13 +782,25 @@ async def get_predictive_trajectory(
     return GenericResponseModel(success=True, data=output)
 
 
-@router.get("/correlation", response_model=GenericResponseModel[List[CrossCorrelationData]])
+@router.get(
+    "/correlation", 
+    response_model=GenericResponseModel[List[CrossCorrelationData]],
+    summary="Get Cross-Commodity Correlation",
+    response_description="The top 5 most correlated commodities based on 90-day historical prices.",
+    tags=["Micro Deep-Dive Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_cross_correlation(
     commodity_id: int,
     regency_id: int,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    Identify substitute or complementary commodities using Pearson correlation.
+    
+    ### Analytics Methodology
+    Pivots 90 days of price data for all commodities in a regency into a time-series matrix. Interpolates missing values, then calculates the Pearson correlation coefficient matrix. Returns the top 5 commodities with the highest absolute correlation to the target commodity.
+    """
     import pandas as pd
     
     end_date = datetime.now().date()
@@ -766,7 +880,13 @@ async def get_cross_correlation(
             
     return GenericResponseModel(success=True, data=output)
 
-@router.get("/market-clusters", response_model=GenericResponseModel[List[MarketClusterData]])
+@router.get(
+    "/market-clusters", 
+    response_model=GenericResponseModel[List[MarketClusterData]],
+    summary="Get Market Behavior Clusters (30D)",
+    response_description="A list of markets categorized into clusters based on price and volatility.",
+    tags=["Micro Deep-Dive Analytics"]
+)
 @cache(expire=43200, key_builder=custom_key_builder)
 async def get_market_clusters(
     commodity_id: int,
@@ -774,6 +894,12 @@ async def get_market_clusters(
     days: int = 30,
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    Segment markets into behavioral clusters based on Price and Volatility.
+    
+    ### Analytics Methodology
+    Aggregates 30 days of market prices to compute Mean (X-axis) and Standard Deviation (Y-axis). Applies Scikit-Learn\'s K-Means clustering (k=3) if there are 5 or more markets. Falls back to Statistical Binning (Percentiles) if the sample size is too small for K-Means.
+    """
     import pandas as pd
     import numpy as np
     from sklearn.cluster import KMeans
