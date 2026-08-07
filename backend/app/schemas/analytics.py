@@ -76,3 +76,11 @@ class PredictiveTrajectoryData(BaseModel):
 class CrossCorrelationData(BaseModel):
     commodity_name: str
     correlation_score: Decimal
+
+class MarketClusterData(BaseModel):
+    market_id: int
+    market_name: str
+    average_price: Decimal
+    volatility: Decimal
+    anomaly_count: int
+    cluster_label: str
