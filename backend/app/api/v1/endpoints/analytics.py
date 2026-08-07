@@ -299,7 +299,7 @@ async def get_macro_anomalies(request: Request, date_id: date, commodity_id: int
 
 @router.get("/spread/market-types", response_model=GenericResponseModel[List[MarketTypeSpreadData]])
 @cache(expire=43200, key_builder=custom_key_builder)
-async def get_market_type_spread(request: Request, start_date: date, end_date: date, commodity_id: int, province_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
+async def get_market_type_spread(request: Request, start_date: date, end_date: date, commodity_id: int, regency_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
     """
     Calculate structural pricing spreads between Traditional, Modern, Wholesaler, and Producer classifications for a specific commodity.
     """
@@ -322,8 +322,8 @@ async def get_market_type_spread(request: Request, start_date: date, end_date: d
         )
     )
     
-    if province_id is not None:
-        query = query.join(DimRegency, DimMarket.regency_id == DimRegency.regency_id).where(DimRegency.province_id == province_id)
+    if regency_id is not None:
+        query = query.where(DimMarket.regency_id == regency_id)
         
     query = query.group_by(DimDate.full_date, DimMarketType.name).order_by(DimDate.full_date, DimMarketType.name)
     
