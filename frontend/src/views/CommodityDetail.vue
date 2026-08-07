@@ -5,68 +5,7 @@
       <div class="mb-8">
         <h1 class="text-xl font-bold tracking-tight text-slate-100">Commodity Analysis</h1>
         <p class="text-sm text-slate-400 mt-1 tracking-wide">Detailed view for selected commodity tracking #{{ commodityId }}</p>
-      </div>
-
-      <!-- Split Comparative Panes (50/50 Split) -->
-      <section class="mb-10">
-        <div class="mb-5 border-b border-slate-800 pb-2 flex items-center justify-between relative">
-          <div class="flex items-center gap-2 group relative w-max">
-            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Market Type Spread Analysis</h2>
-            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case">
-              Membandingkan tren harga rata-rata harian antara Pasar Tradisional (Baseline) dan Pasar Modern (Premium). Analisis rentang (spread) ini berguna untuk memantau disparitas harga dan mengidentifikasi margin premium yang diterapkan oleh ritel modern.
-            </div>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Pane 1: Traditional Markets -->
-          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm h-[320px] flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/60">
-              <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Traditional Market Volume</h3>
-              <span class="text-[9px] uppercase tracking-widest text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-sm border border-emerald-900/50">Baseline</span>
-            </div>
-            
-            <div class="flex-1 relative p-4 flex flex-col">
-              <!-- Skeleton -->
-              <div v-if="loadingSpread" class="absolute inset-4 animate-pulse bg-slate-800/50 rounded-sm"></div>
-              <!-- Empty State -->
-              <div v-else-if="!traditionalSeries || traditionalSeries.length === 0" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm bg-slate-800/20 p-6 text-center">
-                <span class="block text-slate-400 font-medium mb-2">Informasi Tidak Lengkap</span>
-                <span class="block text-xs text-slate-500">Data tidak tersedia untuk tipe pasar ini pada wilayah/waktu yang dipilih.</span>
-              </div>
-              <div v-else class="flex-1 w-full h-full">
-                <TrendAnalyticsChart :xAxisData="traditionalXAxis" :seriesData="traditionalSeries" />
-              </div>
-            </div>
-          </div>
-          
-          <!-- Pane 2: Modern Retail Markets -->
-          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm h-[320px] flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/60">
-              <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Modern Retail Premium</h3>
-              <span class="text-[9px] uppercase tracking-widest text-red-400 bg-red-950/50 px-2 py-1 rounded-sm border border-red-900/50">Variant</span>
-            </div>
-            
-            <div class="flex-1 relative p-4 flex flex-col">
-              <!-- Skeleton -->
-              <div v-if="loadingSpread" class="absolute inset-4 animate-pulse bg-slate-800/50 rounded-sm"></div>
-              <!-- Empty State -->
-              <div v-else-if="!modernSeries || modernSeries.length === 0" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm bg-slate-800/20 p-6 text-center">
-                <span class="block text-slate-400 font-medium mb-2">Informasi Tidak Lengkap</span>
-                <span class="block text-xs text-slate-500">Data tidak tersedia untuk tipe pasar ini pada wilayah/waktu yang dipilih.</span>
-              </div>
-              <div v-else class="flex-1 w-full h-full">
-                <TrendAnalyticsChart :xAxisData="modernXAxis" :seriesData="modernSeries" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Asymmetric Analytics Row (Seasonality Time-Series) -->
+      </div><!-- Asymmetric Analytics Row (Seasonality Time-Series) -->
       <section>
         <div class="mb-5 border-b border-slate-800 pb-2 flex items-center justify-between relative">
           <div class="flex items-center gap-2 group">
@@ -75,7 +14,10 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-              Menampilkan tren pergerakan harga rata-rata harian komoditas dari waktu ke waktu. Gunakan grafik ini untuk melihat pola musiman atau tren jangka panjang.
+              <div class="text-sm leading-relaxed max-w-xs">
+                <p><strong class="text-gray-100 font-semibold">Deskripsi:</strong> <span class="text-gray-300">Visualisasi pergerakan harga komoditas historis dari waktu ke waktu secara komprehensif.</span></p>
+                <p class="mt-2"><strong class="text-gray-100 font-semibold">Interpretasi:</strong> <span class="text-gray-300">Membantu mengidentifikasi pola siklikal, tren musiman (seperti masa panen atau hari raya), dan memantau arah pergerakan harga jangka panjang.</span></p>
+              </div>
             </div>
           </div>
         </div>
@@ -102,7 +44,10 @@
                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                  </svg>
                  <div class="absolute left-0 top-full mt-2 w-64 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-                   Mendeteksi fluktuasi harga yang tidak wajar. Anomali dicatat jika harga harian menyimpang secara signifikan (Spike/Drop) dibandingkan dengan rata-rata pergerakan harga 7 hari terakhir (7D MA).
+                   <div class="text-sm leading-relaxed max-w-xs">
+                     <p><strong class="text-gray-100 font-semibold">Deskripsi:</strong> <span class="text-gray-300">Deteksi otomatis terhadap kejadian di mana harga berubah secara drastis (lonjakan atau penurunan tajam) dibandingkan dengan rata-rata pergerakan 7 hari terakhir (7D MA).</span></p>
+                     <p class="mt-2"><strong class="text-gray-100 font-semibold">Interpretasi:</strong> <span class="text-gray-300">Memberikan peringatan dini terhadap guncangan pasar, gangguan distribusi kelancaran pasokan, atau sebagai indikator efektivitas operasi pasar.</span></p>
+                   </div>
                  </div>
                </div>
              </div>
@@ -153,6 +98,80 @@
             </select>
           </div>
         </div>
+
+      <!-- Split Comparative Panes (50/50 Split) -->
+      <div class="mb-8">
+        <div class="mb-5 border-b border-slate-800 pb-2 flex items-center justify-between relative">
+          <div class="flex items-center gap-2 group relative w-max">
+            <h2 class="text-xs font-bold tracking-[0.1em] text-slate-400 uppercase">Market Type Spread Analysis</h2>
+            <svg class="w-4 h-4 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="absolute left-0 top-full mt-2 w-72 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none font-normal normal-case">
+              <div class="text-sm leading-relaxed max-w-xs">
+                <p><strong class="text-gray-100 font-semibold">Deskripsi:</strong> <span class="text-gray-300">Membandingkan tren harga rata-rata harian antara Pasar Tradisional (Baseline) dan Ritel Modern (Premium/Variant) di wilayah terkait.</span></p>
+                <p class="mt-2"><strong class="text-gray-100 font-semibold">Interpretasi:</strong> <span class="text-gray-300">Memantau disparitas harga. Margin yang melebar menunjukkan tingginya premium ritel, sedangkan margin yang menyempit secara drastis bisa mengindikasikan kelangkaan pasokan di pasar tradisional.</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+          <!-- Pane 1: Traditional Markets -->
+          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm h-[320px] flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/60">
+              <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Traditional Market Volume</h3>
+              <span class="text-[9px] uppercase tracking-widest text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-sm border border-emerald-900/50">Baseline</span>
+            </div>
+            
+            <div class="flex-1 relative p-4 flex flex-col">
+              <!-- Skeleton -->
+              <div v-if="loadingSpread" class="absolute inset-4 animate-pulse bg-slate-800/50 rounded-sm"></div>
+              <!-- Empty State -->
+              <div v-else-if="!traditionalSeries || traditionalSeries.length === 0" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm bg-slate-800/20 p-6 text-center">
+                <span class="block text-slate-400 font-medium mb-2">Informasi Tidak Lengkap</span>
+                <span class="block text-xs text-slate-500">Data tidak tersedia untuk tipe pasar ini pada wilayah/waktu yang dipilih.</span>
+              </div>
+              <div v-else class="flex-1 w-full h-full">
+                <TrendAnalyticsChart :xAxisData="traditionalXAxis" :seriesData="traditionalSeries" />
+              </div>
+            </div>
+          </div>
+          
+          <!-- Pane 2: Modern Retail Markets -->
+          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm h-[320px] flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/60">
+              <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Modern Retail Premium</h3>
+              <div class="flex items-center gap-3">
+                <span 
+                  v-if="spreadMarginPercentage !== null" 
+                  class="text-[11px] font-bold uppercase tracking-widest"
+                  :class="spreadMarginPercentage > 0 ? 'text-rose-400' : 'text-emerald-400'"
+                >
+                  Margin {{ spreadMarginPercentage > 0 ? '+' : '' }}{{ spreadMarginPercentage.toFixed(1) }}%
+                </span>
+                <span class="text-[9px] uppercase tracking-widest text-red-400 bg-red-950/50 px-2 py-1 rounded-sm border border-red-900/50">Variant</span>
+              </div>
+            </div>
+            
+            <div class="flex-1 relative p-4 flex flex-col">
+              <!-- Skeleton -->
+              <div v-if="loadingSpread" class="absolute inset-4 animate-pulse bg-slate-800/50 rounded-sm"></div>
+              <!-- Empty State -->
+              <div v-else-if="!modernSeries || modernSeries.length === 0" class="flex flex-col h-full w-full items-center justify-center text-slate-500 text-sm border border-dashed border-slate-700/50 rounded-sm bg-slate-800/20 p-6 text-center">
+                <span class="block text-slate-400 font-medium mb-2">Informasi Tidak Lengkap</span>
+                <span class="block text-xs text-slate-500">Data tidak tersedia untuk tipe pasar ini pada wilayah/waktu yang dipilih.</span>
+              </div>
+              <div v-else class="flex-1 w-full h-full">
+                <TrendAnalyticsChart :xAxisData="modernXAxis" :seriesData="modernSeries" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+
         
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Predictive Price Trajectory Chart -->
@@ -163,8 +182,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div class="absolute left-4 top-8 w-80 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[60] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-                <strong>Deskripsi:</strong> Proyeksi estimasi harga 14 hari ke depan menggunakan algoritma Linear Regression berdasarkan tren historis dan musiman 90 hari terakhir.<br><br>
-                <strong>Interpretasi:</strong> Garis solid adalah data aktual. Garis putus-putus adalah estimasi. Area berarsir (Confidence Interval) menunjukkan rentang ketidakpastian; semakin lebar area, semakin tinggi volatilitas harga.
+                <div class="text-sm leading-relaxed max-w-xs">
+                  <p><strong class="text-gray-100 font-semibold">Deskripsi:</strong> <span class="text-gray-300">Proyeksi estimasi harga 14 hari ke depan menggunakan algoritma Linear Regression berdasarkan tren historis dan musiman 90 hari terakhir.</span></p>
+                  <p class="mt-2"><strong class="text-gray-100 font-semibold">Interpretasi:</strong> <span class="text-gray-300">Garis solid adalah data aktual. Garis putus-putus adalah estimasi. Area berarsir (Confidence Interval) menunjukkan rentang ketidakpastian; semakin lebar area, semakin tinggi volatilitas harga.</span></p>
+                </div>
               </div>
             </div>
             <div class="flex-1 w-full relative">
@@ -183,8 +204,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div class="absolute left-4 top-8 w-80 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[60] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-                <strong>Deskripsi:</strong> Analisis koefisien korelasi Pearson untuk mengukur sejauh mana pergerakan harga komoditas utama mempengaruhi komoditas substitusi/komplementer di pasar lokal yang sama.<br><br>
-                <strong>Interpretasi:</strong> Skala 0.0 hingga 1.0. Nilai di atas 0.70 menunjukkan hubungan yang sangat kuat (efek domino). Jika harga beras naik, komoditas dengan korelasi tinggi kemungkinan besar akan mengikuti.
+                <div class="text-sm leading-relaxed max-w-xs">
+                  <p><strong class="text-gray-100 font-semibold">Deskripsi:</strong> <span class="text-gray-300">Analisis koefisien korelasi Pearson untuk mengukur sejauh mana pergerakan harga komoditas utama mempengaruhi komoditas substitusi/komplementer di pasar lokal yang sama.</span></p>
+                  <p class="mt-2"><strong class="text-gray-100 font-semibold">Interpretasi:</strong> <span class="text-gray-300">Skala 0.0 hingga 1.0. Nilai di atas 0.70 menunjukkan hubungan yang sangat kuat (efek domino). Jika harga beras naik, komoditas dengan korelasi tinggi kemungkinan besar akan mengikuti.</span></p>
+                </div>
               </div>
             </div>
             <div class="flex-1 w-full relative">
@@ -205,8 +228,10 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div class="absolute left-4 top-8 w-80 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[60] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-              <strong>Deskripsi:</strong> Pengelompokan (Clustering) menggunakan algoritma DBSCAN berdasarkan Rata-rata Harga (X) dan Volatilitas/Std Deviasi (Y) selama 30 hari terakhir. Ukuran bubble menunjukkan frekuensi anomali harga di pasar tersebut.<br><br>
-              <strong>Interpretasi:</strong> Mengidentifikasi pasar yang berisiko tinggi (volatilitas dan anomali tinggi) vs. stabil. "Outlier" (biasanya merah) menunjukkan pasar dengan perilaku harga yang menyimpang jauh dari pasar lainnya di wilayah yang sama.
+              <div class="text-sm leading-relaxed max-w-xs">
+                <p><strong class="text-gray-100 font-semibold">Deskripsi:</strong> <span class="text-gray-300">Pengelompokan (Clustering) menggunakan algoritma K-Means / Statistical Binning berdasarkan Rata-rata Harga (X) dan Volatilitas/Std Deviasi (Y) selama 30 hari terakhir. Ukuran bubble menunjukkan frekuensi anomali.</span></p>
+                <p class="mt-2"><strong class="text-gray-100 font-semibold">Interpretasi:</strong> <span class="text-gray-300">Mengidentifikasi segmentasi pasar (misal: Premium vs. Baseline). Pasar dengan volatilitas tinggi berada pada risiko gejolak yang lebih besar dan memerlukan pengawasan ekstra.</span></p>
+              </div>
             </div>
           </div>
           <div class="flex-1 w-full relative">
@@ -270,6 +295,21 @@ export default defineComponent({
     }
   },
   computed: {
+    spreadMarginPercentage() {
+      if (!this.traditionalSeries || this.traditionalSeries.length === 0 || !this.modernSeries || this.modernSeries.length === 0) {
+        return null
+      }
+      const tradData = this.traditionalSeries[0].data
+      const modData = this.modernSeries[0].data
+      if (tradData.length === 0 || modData.length === 0) return null
+      
+      const lastTrad = tradData[tradData.length - 1]
+      const lastMod = modData[modData.length - 1]
+      
+      if (lastTrad === 0) return null
+      
+      return ((lastMod - lastTrad) / lastTrad) * 100
+    },
     ...mapState(useMacroStore, ['province_id', 'date', 'commodity_id'])
   },
   watch: {
@@ -303,7 +343,6 @@ export default defineComponent({
       this.seriesData = null
       this.historicalAnomalies = []
       
-      this.loadingSpread = true
       this.loadingSeries = true
       
       if (this.abortController) {
@@ -315,68 +354,6 @@ export default defineComponent({
       const payloadParams = {}
       if (this.province_id !== null && this.province_id !== 'all') {
         payloadParams.province_id = this.province_id
-      }
-      
-      try {
-        // Fetch Market Type Spread
-        // We set a 30-day window based on the selected date for spread analysis
-        const endDate = new Date(this.date)
-        const startDate = new Date(endDate)
-        startDate.setDate(startDate.getDate() - 30)
-        
-        const spreadRes = await apiClient.get('/analytics/spread/market-types', {
-          params: { 
-            start_date: startDate.toISOString().split('T')[0], 
-            end_date: this.date,
-            commodity_id: parseInt(this.commodity_id, 10),
-            ...payloadParams
-          },
-          signal
-        })
-        
-        if (spreadRes.data.success && spreadRes.data.data && spreadRes.data.data.length > 0) {
-          const tradData = spreadRes.data.data.filter(d => d.market_type_name === 'Pasar Tradisional')
-          const modData = spreadRes.data.data.filter(d => d.market_type_name === 'Pasar Modern')
-          
-          if (tradData.length > 0) {
-            this.traditionalXAxis = tradData.map(d => {
-              const dt = new Date(d.date_id)
-              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            })
-            this.traditionalSeries = [{
-              name: 'Average Price',
-              data: tradData.map(d => parseFloat(d.avg_price)),
-              color: '#34d399'
-            }]
-          } else {
-            this.traditionalSeries = []
-          }
-          
-          if (modData.length > 0) {
-            this.modernXAxis = modData.map(d => {
-              const dt = new Date(d.date_id)
-              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            })
-            this.modernSeries = [{
-              name: 'Average Price',
-              data: modData.map(d => parseFloat(d.avg_price)),
-              color: '#f87171'
-            }]
-          } else {
-            this.modernSeries = []
-          }
-        } else {
-          this.traditionalSeries = []
-          this.modernSeries = []
-        }
-      } catch (err) {
-        if (err.name !== 'CanceledError' && err.message !== 'canceled') {
-          console.error('Failed to fetch spread data:', err)
-        }
-        this.traditionalSeries = []
-        this.modernSeries = []
-      } finally {
-        this.loadingSpread = false
       }
       
       try {
@@ -471,6 +448,76 @@ export default defineComponent({
     },
     async fetchMicroDeepDive() {
       if (!this.selectedRegencyId || !this.commodity_id) return
+      
+      const signal = this.abortController ? this.abortController.signal : undefined;
+      this.loadingSpread = true
+      
+      const payloadParams = {}
+      if (this.selectedRegencyId) {
+        payloadParams.regency_id = this.selectedRegencyId
+      }
+      try {
+        // Fetch Market Type Spread
+        // We set a 30-day window based on the selected date for spread analysis
+        const endDate = new Date(this.date)
+        const startDate = new Date(endDate)
+        startDate.setDate(startDate.getDate() - 30)
+        
+        const spreadRes = await apiClient.get('/analytics/spread/market-types', {
+          params: { 
+            start_date: startDate.toISOString().split('T')[0], 
+            end_date: this.date,
+            commodity_id: parseInt(this.commodity_id, 10),
+            ...payloadParams
+          },
+          signal
+        })
+        
+        if (spreadRes.data.success && spreadRes.data.data && spreadRes.data.data.length > 0) {
+          const tradData = spreadRes.data.data.filter(d => d.market_type_name === 'Pasar Tradisional')
+          const modData = spreadRes.data.data.filter(d => d.market_type_name === 'Pasar Modern')
+          
+          if (tradData.length > 0) {
+            this.traditionalXAxis = tradData.map(d => {
+              const dt = new Date(d.date_id)
+              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            })
+            this.traditionalSeries = [{
+              name: 'Average Price',
+              data: tradData.map(d => parseFloat(d.avg_price)),
+              color: '#34d399'
+            }]
+          } else {
+            this.traditionalSeries = []
+          }
+          
+          if (modData.length > 0) {
+            this.modernXAxis = modData.map(d => {
+              const dt = new Date(d.date_id)
+              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            })
+            this.modernSeries = [{
+              name: 'Average Price',
+              data: modData.map(d => parseFloat(d.avg_price)),
+              color: '#f87171'
+            }]
+          } else {
+            this.modernSeries = []
+          }
+        } else {
+          this.traditionalSeries = []
+          this.modernSeries = []
+        }
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.message !== 'canceled') {
+          console.error('Failed to fetch spread data:', err)
+        }
+        this.traditionalSeries = []
+        this.modernSeries = []
+      } finally {
+        this.loadingSpread = false
+      }
+      
       
       this.loadingPredictive = true
       this.loadingCorrelation = true
