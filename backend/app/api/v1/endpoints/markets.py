@@ -9,11 +9,21 @@ from app.schemas import DimMarketSchema, GenericResponseModel
 
 router = APIRouter()
 
-@router.get("", response_model=GenericResponseModel[List[DimMarketSchema]])
+@router.get(
+    "", 
+    response_model=GenericResponseModel[List[DimMarketSchema]],
+    summary="Get Statically Mapped Markets",
+    response_description="A list of specific geographic retail and wholesale markets.",
+    tags=["Master Data - Markets"]
+)
 async def get_markets(db: AsyncSession = Depends(get_db)):
     """
-    Retrieve all markets with geospatial fallback to parent regency coordinates
-    if the market's specific coordinates are missing.
+    Retrieve all markets with geospatial fallback to parent regency coordinates if the market's specific coordinates are missing.
+    
+    ### Business Logic Note
+    This endpoint tracks specific Traditional Markets (Baseline) and Modern Retailers (Variant). By distinguishing these types via `market_type_id`, the Analytics engine can compute structural inflation and supply chain disparities.
+    
+    > **⚠️ CRITICAL:** This is a Master Data endpoint returning strictly static records. The IDs returned here **MUST** be utilized as parameters for the `/analytics` endpoints.
     """
     query = (
         select(
