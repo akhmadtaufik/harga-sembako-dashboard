@@ -24,7 +24,7 @@ from app.schemas import (
     AnomalyData, MarketTypeSpreadData, RegionalMatrixData,
     MacroAnomalyData, VolatilityData, HeatmapData,
     AffordabilityBasketData, SupplyChainMarginData,
-    PredictiveTrajectoryData, CrossCorrelationData
+    PredictiveTrajectoryData, CrossCorrelationData, MarketClusterData
 )
 
 def date_to_int(d: date) -> int:
@@ -764,4 +764,144 @@ async def get_cross_correlation(
                 )
             )
             
+    return GenericResponseModel(success=True, data=output)
+
+@router.get("/market-clusters", response_model=GenericResponseModel[List[MarketClusterData]])
+@cache(expire=43200, key_builder=custom_key_builder)
+async def get_market_clusters(
+    commodity_id: int,
+    regency_id: int,
+    days: int = 30,
+    db: AsyncSession = Depends(get_db)
+):
+    import pandas as pd
+    import numpy as np
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    end_date_int = date_to_int(end_date)
+    start_date_int = date_to_int(start_date)
+
+    query = (
+        select(
+            FactDailyPrice.date_id,
+            FactDailyPrice.market_id,
+            DimMarket.name.label("market_name"),
+            FactDailyPrice.price
+        )
+        .join(DimMarket, FactDailyPrice.market_id == DimMarket.market_id)
+        .where(
+            FactDailyPrice.commodity_id == commodity_id,
+            DimMarket.regency_id == regency_id,
+            FactDailyPrice.date_id >= start_date_int,
+            FactDailyPrice.date_id <= end_date_int,
+            FactDailyPrice.price > 0
+        )
+    )
+    
+    result = await db.execute(query)
+    rows = result.fetchall()
+    
+    if not rows:
+        return GenericResponseModel(success=True, data=[])
+        
+    df = pd.DataFrame([{
+        "date_id": r.date_id,
+        "market_id": r.market_id,
+        "market_name": r.market_name,
+        "price": float(r.price)
+    } for r in rows])
+    
+    # Calculate per-market metrics
+    market_stats = []
+    
+    for market_id, group in df.groupby("market_id"):
+        mean_price = group["price"].mean()
+        std_price = group["price"].std()
+        if pd.isna(std_price):
+            std_price = 0
+            
+        # Count anomalies: days where price > mean + 2*std or price < mean - 2*std
+        if std_price > 0:
+            anomalies = group[(group["price"] > mean_price + 2*std_price) | (group["price"] < mean_price - 2*std_price)]
+            anomaly_count = len(anomalies)
+        else:
+            anomaly_count = 0
+            
+        market_stats.append({
+            "market_id": market_id,
+            "market_name": group["market_name"].iloc[0],
+            "average_price": mean_price,
+            "volatility": std_price,
+            "anomaly_count": anomaly_count
+        })
+        
+    stats_df = pd.DataFrame(market_stats)
+    
+    if len(stats_df) < 5:
+        # Sample size N < 5: Use simple mean comparisons
+        overall_mean = stats_df["average_price"].mean()
+        
+        data = []
+        for _, row in stats_df.iterrows():
+            if row.average_price > overall_mean:
+                label = "Premium"
+            else:
+                label = "Baseline"
+                
+            data.append(
+                MarketClusterData(
+                    market_id=row.market_id,
+                    market_name=row.market_name,
+                    average_price=Decimal(str(round(row.average_price))),
+                    volatility=Decimal(str(round(row.volatility))),
+                    anomaly_count=row.anomaly_count,
+                    cluster_label=label
+                )
+            )
+        return GenericResponseModel(success=True, data=data)
+
+    # Sample size N >= 5: Use K-Means Clustering
+    X = stats_df[["average_price", "volatility"]].values
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    k = min(3, len(stats_df) // 2)
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    clusters = kmeans.fit_predict(X_scaled)
+    
+    stats_df["cluster"] = clusters
+    
+    # Sort centroids by average price to assign logical names
+    cluster_means = stats_df.groupby("cluster")["average_price"].mean().sort_values()
+    
+    # Map cluster index to labels
+    labels_map = {}
+    if k == 3:
+        logical_names = ["Budget", "Baseline", "Premium"]
+    else:
+        logical_names = ["Baseline", "Premium"]
+        
+    for i, cluster_idx in enumerate(cluster_means.index):
+        labels_map[cluster_idx] = logical_names[i]
+        
+    output = []
+    for _, row in stats_df.iterrows():
+        cluster_id = int(row["cluster"])
+        label = labels_map[cluster_id]
+        
+        output.append(
+            MarketClusterData(
+                market_id=row["market_id"],
+                market_name=row["market_name"],
+                average_price=Decimal(str(round(row["average_price"]))),
+                volatility=Decimal(str(round(row["volatility"]))),
+                anomaly_count=int(row["anomaly_count"]),
+                cluster_label=label
+            )
+        )
+        
     return GenericResponseModel(success=True, data=output)
