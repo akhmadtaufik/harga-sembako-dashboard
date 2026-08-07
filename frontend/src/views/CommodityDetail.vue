@@ -156,7 +156,7 @@
         
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Predictive Price Trajectory Chart -->
-          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm p-4 flex flex-col relative min-h-[420px]">
+          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm p-4 flex flex-col relative min-h-[420px] min-w-0 overflow-hidden">
             <div class="flex items-center gap-2 group mb-2">
               <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Predictive Price Trajectory (14D)</h3>
               <svg class="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -176,7 +176,7 @@
           </div>
 
           <!-- Cross-Commodity Correlation Radar -->
-          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm p-4 flex flex-col relative min-h-[420px]">
+          <div class="bg-slate-800/40 border border-slate-700/50 rounded-sm p-4 flex flex-col relative min-h-[420px] min-w-0 overflow-hidden">
             <div class="flex items-center gap-2 group mb-2">
               <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Cross-Commodity Correlation (90D)</h3>
               <svg class="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,6 +194,27 @@
               />
             </div>
           </div>
+
+        </div>
+        
+        <!-- Market Behavior Clustering Scatter Plot (Full-Width Row) -->
+        <div class="mt-6 bg-slate-800/40 border border-slate-700/50 rounded-sm p-4 flex flex-col relative min-h-[420px] min-w-0 overflow-hidden">
+          <div class="flex items-center gap-2 group mb-2">
+            <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-300">Market Behavior Clusters (30D)</h3>
+            <svg class="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 cursor-help transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="absolute left-4 top-8 w-80 p-3 bg-slate-900 border border-slate-700 rounded-md shadow-xl text-xs text-slate-300 z-[60] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+              <strong>Deskripsi:</strong> Pengelompokan (Clustering) menggunakan algoritma DBSCAN berdasarkan Rata-rata Harga (X) dan Volatilitas/Std Deviasi (Y) selama 30 hari terakhir. Ukuran bubble menunjukkan frekuensi anomali harga di pasar tersebut.<br><br>
+              <strong>Interpretasi:</strong> Mengidentifikasi pasar yang berisiko tinggi (volatilitas dan anomali tinggi) vs. stabil. "Outlier" (biasanya merah) menunjukkan pasar dengan perilaku harga yang menyimpang jauh dari pasar lainnya di wilayah yang sama.
+            </div>
+          </div>
+          <div class="flex-1 w-full relative">
+            <MarketClusterChart 
+              :data="clusterData" 
+              :loading="loadingCluster" 
+            />
+          </div>
         </div>
       </section>
 
@@ -209,6 +230,7 @@ import DashboardLayout from '../components/DashboardLayout.vue'
 import TrendAnalyticsChart from '../components/TrendAnalyticsChart.vue'
 import PredictiveTrajectoryChart from '../components/PredictiveTrajectoryChart.vue'
 import CrossCorrelationRadar from '../components/CrossCorrelationRadar.vue'
+import MarketClusterChart from '../components/MarketClusterChart.vue'
 import apiClient from '../plugins/axios'
 
 export default defineComponent({
@@ -217,7 +239,8 @@ export default defineComponent({
     DashboardLayout,
     TrendAnalyticsChart,
     PredictiveTrajectoryChart,
-    CrossCorrelationRadar
+    CrossCorrelationRadar,
+    MarketClusterChart
   },
   data() {
     return {
@@ -239,8 +262,10 @@ export default defineComponent({
       selectedRegencyId: "",
       predictiveData: [],
       correlationData: [],
+      clusterData: [],
       loadingPredictive: false,
       loadingCorrelation: false,
+      loadingCluster: false,
       loadingRegencies: false
     }
   },
@@ -435,6 +460,7 @@ export default defineComponent({
             this.selectedRegencyId = ""
             this.predictiveData = []
             this.correlationData = []
+            this.clusterData = []
           }
         }
       } catch (err) {
@@ -483,6 +509,25 @@ export default defineComponent({
         this.correlationData = []
       } finally {
         this.loadingCorrelation = false
+      }
+      
+      try {
+        // Fetch Market Behavior Clusters
+        this.loadingCluster = true
+        const clusterRes = await apiClient.get('/analytics/market-clusters', {
+          params: {
+            commodity_id: this.commodity_id,
+            regency_id: this.selectedRegencyId
+          }
+        })
+        if (clusterRes.data.success) {
+          this.clusterData = clusterRes.data.data
+        }
+      } catch (err) {
+        console.error('Failed to fetch market clusters:', err)
+        this.clusterData = []
+      } finally {
+        this.loadingCluster = false
       }
     },
     formatCurrency(value) {
