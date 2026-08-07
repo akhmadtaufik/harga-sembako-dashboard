@@ -22,6 +22,7 @@ from app.schemas.analytics import (
     SupplyChainMarginData,
     PredictiveTrajectoryData,
     CrossCorrelationData,
+    MarketClusterData,
 )
 
 __all__ = [
@@ -47,4 +48,5 @@ __all__ = [
     "SupplyChainMarginData",
     "PredictiveTrajectoryData",
     "CrossCorrelationData",
+    "MarketClusterData",
 ]
